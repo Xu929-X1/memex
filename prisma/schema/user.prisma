@@ -1,0 +1,26 @@
+model User {
+    id       String @id @default(cuid())
+    username String @unique
+    email    String @unique
+    password String
+
+    documents       Document[]
+    thirdPartyAuths ThirdPartyAuth[]
+}
+
+enum AuthProvider {
+    GOOGLE
+    GITHUB
+}
+
+model ThirdPartyAuth {
+    id             String       @id @default(cuid())
+    userId         String
+    user           User         @relation(fields: [userId], references: [id])
+    provider       AuthProvider
+    providerUserId String
+    accessToken    String
+    refreshToken   String?
+
+    @@unique([provider, providerUserId])
+}

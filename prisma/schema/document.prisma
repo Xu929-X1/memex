@@ -1,0 +1,29 @@
+model Document {
+    id            String     @id @default(cuid())
+    userId        String
+    user          User       @relation(fields: [userId], references: [id])
+    documentTitle String
+    source        String
+    createdAt     DateTime   @default(now())
+    updatedAt     DateTime   @updatedAt
+    sourceType    SourceType
+
+    documentSections DocumentSection[]
+}
+
+enum SourceType {
+    PDF
+    NOTION
+    WEB
+    MARKDOWN
+}
+
+model DocumentSection {
+    id             Int                         @id @default(autoincrement())
+    documentId     String
+    document       Document                    @relation(fields: [documentId], references: [id])
+    sectionContent String
+    sectionVector  Unsupported("vector(1536)")
+    headingContext String
+    chunkIndex     Int
+}
