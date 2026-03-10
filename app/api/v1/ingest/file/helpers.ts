@@ -1,0 +1,124 @@
+import { LLM, ModelConfig } from "@/utils/AI/model";
+import { ingestText } from "@/utils/AI/pipeline/ingest";
+import { chunk } from "@/utils/AI/semanticChunk/chunk";
+import { Root, RootContent } from "mdast";
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { PDFParse } from "pdf-parse";
+
+
+export interface FileParseResult {
+    sections: {
+        sectionContent: string,
+        headingContext: string,
+        codeBlocks?: string[],
+        chunkIndex: number
+    }[]
+}
+
+const MARKDOWN_SECTION_STRATEGIES = {
+    heading: (node: RootContent, headingStack: { depth: number; val: string }[], sections: FileParseResult["sections"], currentSectionContent: string[], currentCodeBlocks: string[], currentChunkIndex: number) => {
+        if (currentSectionContent.length > 0 || currentCodeBlocks.length > 0) {
+            const headingContext = headingStack.map(h => h.val).join(" > ");
+            const sectionContent = currentSectionContent.join("\n");
+            const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : undefined;
+            sections.push({ sectionContent, headingContext, codeBlocks, chunkIndex: currentChunkIndex });
+            currentSectionContent.splice(0, currentSectionContent.length)
+            currentCodeBlocks.splice(0, currentCodeBlocks.length)
+        }
+        const headingNode = node as Extract<RootContent, { type: "heading" }>;
+        const currentHeadingDepth = headingNode.depth;
+        while (headingStack.length > 0 && headingStack[headingStack.length - 1].depth >= currentHeadingDepth) {
+            headingStack.pop();
+        }
+        const headingText = headingNode.children
+            .filter(child => child.type === "text")
+            .map(child => (child as Extract<RootContent, { type: "text" }>).value)
+            .join(" ");
+        headingStack.push({ depth: currentHeadingDepth, val: headingText });
+    },
+    paragraph: (node: RootContent, currentSectionContent: string[]) => {
+        const paragraphNode = node as Extract<RootContent, { type: "paragraph" }>;
+        const paragraphText = paragraphNode.children
+            .filter(child => child.type === "text")
+            .map(child => (child as Extract<RootContent, { type: "text" }>).value)
+            .join(" ");
+        currentSectionContent.push(paragraphText);
+    },
+    code: (node: RootContent, currentCodeBlocks: string[]) => {
+        const codeNode = node as Extract<RootContent, { type: "code" }>;
+        currentCodeBlocks.push(codeNode.value);
+    }
+} as const;
+
+export async function parseMarkdown(file: File): Promise<FileParseResult> {
+    const fileContent = await file.text();
+    const ast = fromMarkdown(fileContent);
+    const headingStack: {
+        depth: number;
+        val: string;
+    }[] = [];
+    let currentCodeBlocks: string[] = [];
+    let currentSectionContent: string[] = [];
+    function extractSections(root: Root | RootContent): FileParseResult["sections"] {
+        const sections: FileParseResult["sections"] = [];
+        if ("children" in root) {
+            if (root.children.length === 0) {
+                return sections;
+            } else {
+                for (const node of root.children) {
+                    const nodeType = node.type as keyof typeof MARKDOWN_SECTION_STRATEGIES;
+                    if (nodeType in MARKDOWN_SECTION_STRATEGIES) {
+                        if (nodeType === "heading") {
+                            MARKDOWN_SECTION_STRATEGIES[nodeType](node, headingStack, sections, currentSectionContent, currentCodeBlocks, sections.length);
+                        } else if (nodeType === "paragraph") {
+                            MARKDOWN_SECTION_STRATEGIES[nodeType](node, currentSectionContent);
+                        } else if (nodeType === "code") {
+                            MARKDOWN_SECTION_STRATEGIES[nodeType](node, currentCodeBlocks);
+                        }
+                    }
+                }
+            }
+
+        }
+        if (currentSectionContent.length > 0 || currentCodeBlocks.length > 0) {
+            const headingContext = headingStack.map(h => h.val).join(" > ");
+            const sectionContent = currentSectionContent.join("\n");
+            const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : undefined;
+            sections.push({ sectionContent, headingContext, codeBlocks, chunkIndex: sections.length });
+        }
+        return sections;
+    }
+
+    return { sections: extractSections(ast) };
+}
+
+
+export async function parseText<T extends LLM>(text: string, LLMtype: T, config: ModelConfig<T>): Promise<FileParseResult> {
+    const sections: FileParseResult["sections"] = [];
+    const chunks = await chunk(text);
+    let lastHeadingContext = "Beginning of the documment"
+    for (let i = 0; i < chunks.length; i++) {
+        const currentChunk = chunks[i].join(" ");
+        const currentSections = await ingestText(currentChunk, lastHeadingContext, LLMtype, config);
+        lastHeadingContext = currentSections.sections.at(-1)?.headingContext ?? "";
+        const offset = sections.length
+        currentSections.sections.forEach(s => {
+            sections.push({ ...s, chunkIndex: offset + s.chunkIndex })
+        })
+    }
+
+    return {
+        sections
+    };
+}
+
+export async function parsePDF<T extends LLM>(file: File, LLMtype: T, config: ModelConfig<T>): Promise<FileParseResult> {
+    const fileContent = await file.arrayBuffer();
+    const buffer = Buffer.from(fileContent);
+
+    const data = new PDFParse({ data: buffer });
+    const pdfData = (await data.getText()).text;
+    const res = await parseText(pdfData, LLMtype, config);
+    return res;
+}
+

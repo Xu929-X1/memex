@@ -16,6 +16,7 @@ enum SourceType {
     NOTION
     WEB
     MARKDOWN
+    TEXT
 }
 
 model DocumentSection {
