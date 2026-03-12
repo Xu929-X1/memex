@@ -64,7 +64,7 @@ export default function Page() {
                         <CardContent>
                             <form id={FORM_NAME} action={formAction}>
                                 <div className="flex flex-col gap-6">
-                                    <div className="gird gap-2">
+                                    <div className="grid gap-2">
                                         <Label htmlFor="identifier">
                                             Email or Username
                                         </Label>

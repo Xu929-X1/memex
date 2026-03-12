@@ -49,8 +49,9 @@ function semanticChunk(sentences: string[], embeddings: number[][], maxToken: nu
                     : 0.75
                 if (relavance < threshold) {
                     chunkResult.push(currentChunk);
-                    currentToken = 0;
                     currentChunk = [];
+                    currentChunk.push(sentences[i]);
+                    currentToken = tokenCount;
                     continue;
                 }
             }

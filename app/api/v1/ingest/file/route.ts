@@ -96,5 +96,7 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
             await tx.$executeRaw` INSERT INTO "DocumentSection" ("documentId", "sectionContent", "headingContext", "chunkIndex", "sectionVector")
     VALUES ( ${document.id}, ${item.sectionContent}, ${item.headingContext}, ${item.chunkIndex}, ${embeddings[i]}::vector)`
         }
+
+        return { documentId: document.id }
     })
 });

@@ -1,5 +1,5 @@
 import { FileParseResult } from "@/app/api/v1/ingest/file/helpers";
-import { HumanMessage, SystemMessage } from "langchain";
+import { HumanMessage, SystemMessage } from "langchain/";
 import * as z from "zod";
 import { createModel, LLM, ModelConfig } from "../model";
 import { buildTextParserPrompt } from "../prompts";

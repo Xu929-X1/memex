@@ -3,7 +3,6 @@ import { ingestText } from "@/utils/AI/pipeline/ingest";
 import { chunk } from "@/utils/AI/semanticChunk/chunk";
 import { Root, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { PDFParse } from "pdf-parse";
 
 
 export interface FileParseResult {
@@ -115,8 +114,8 @@ export async function parseText<T extends LLM>(text: string, LLMtype: T, config:
 export async function parsePDF<T extends LLM>(file: File, LLMtype: T, config: ModelConfig<T>): Promise<FileParseResult> {
     const fileContent = await file.arrayBuffer();
     const buffer = Buffer.from(fileContent);
-
-    const data = new PDFParse({ data: buffer });
+    const pdfParse = require('pdf-parse');
+    const data = await pdfParse(buffer);
     const pdfData = (await data.getText()).text;
     const res = await parseText(pdfData, LLMtype, config);
     return res;
