@@ -23,9 +23,8 @@ export const POST = withApiHandler(async (request: NextRequest) => {
             OR: [{ email: validationResult.data.email }, { username: validationResult.data.username }]
         }
     })
-
     if (existing) {
-        throw AppError.badRequest("Email or username already taken")
+        throw AppError.badRequest("Email or username already taken");
     }
     const hashedPassword = await bcrypt.hash(validationResult.data.password, 10)
     const createdUser = await prisma.user.create({

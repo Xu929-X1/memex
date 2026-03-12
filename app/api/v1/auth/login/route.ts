@@ -9,11 +9,8 @@ import { NextRequest } from "next/server";
 import * as z from "zod";
 const loginSchema = z.object({
     password: z.string(),
-    email: z.email(),
-    username: z.string()
-}).partial().refine(data => {
-    return (data.email || data.username) && data.password
-}, "Either username or email is required for login")
+    identifier: z.string()
+});
 
 export const POST = withApiHandler(async (request: NextRequest) => {
     const payload = await request.json();
@@ -21,22 +18,22 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     if (validatedPayload.error) {
         throw AppError.unauthorized("Invalid Credentials")
     }
-    const user = await prisma.user.findUnique({
-        where: validatedPayload.data.email ? {
-            email: validatedPayload.data.email
-        } : {
-            username: validatedPayload.data.username
-        }
-    });
 
-    if (!user) {
-        throw AppError.unauthorized("Invalid Credentials");
-    }
+    const user = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { email: validatedPayload.data.identifier },
+                { username: validatedPayload.data.identifier }
+            ]
+        }
+    })
+
+    if (!user) throw AppError.unauthorized("Invalid Credentials")
+
 
     if (!validatedPayload.data.password) {
         throw AppError.unauthorized("Invalid Credentials");
     }
-
     const isValid = await bcrypt.compare(validatedPayload.data.password, user.password);
     if (!isValid) {
         throw AppError.unauthorized('Invalid Credentials');
