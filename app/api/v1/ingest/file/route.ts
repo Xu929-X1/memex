@@ -73,6 +73,13 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
         default:
             throw AppError.badRequest("Unsupported file type");
     }
+    const embedder = new OpenAIEmbeddings({
+        model: 'text-embedding-3-small',
+        apiKey: process.env.OPENAI_API_KEY
+    })
+    const embeddings = await embedder.embedDocuments(
+        parseResult.sections.map(s => s.sectionContent)
+    )
     return await prisma.$transaction(async (tx) => {
         //save document
         const document = await tx.document.create({
@@ -83,18 +90,13 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
                 userId: userId
             }
         })
-        //save sections
-        const embedder = new OpenAIEmbeddings({
-            model: 'text-embedding-3-small',
-            apiKey: process.env.OPENAI_API_KEY
-        })
-        const embeddings = await embedder.embedDocuments(
-            parseResult.sections.map(s => s.sectionContent)
-        )
+
         for (let i = 0; i < parseResult.sections.length; i++) {
             const item = parseResult.sections[i];
+            const vectorStr = `[${embeddings[i].join(",")}]`;
+
             await tx.$executeRaw` INSERT INTO "DocumentSection" ("documentId", "sectionContent", "headingContext", "chunkIndex", "sectionVector")
-    VALUES ( ${document.id}, ${item.sectionContent}, ${item.headingContext}, ${item.chunkIndex}, ${embeddings[i]}::vector)`
+    VALUES ( ${document.id}, ${item.sectionContent}, ${item.headingContext}, ${item.chunkIndex}, ${vectorStr}::vector)`
         }
 
         return { documentId: document.id }

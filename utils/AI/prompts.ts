@@ -19,4 +19,5 @@ Rules:
 - headingContext should use " > " to separate hierarchy levels
 - codeBlocks can be omitted if empty
 - chunkIndex starts from 0 for each chunk
+- Output language should be the same as input source text. Disregard the language of this prompt. For example, if user uploaded Chinese, section content and heading context should be in Chinese.
 `

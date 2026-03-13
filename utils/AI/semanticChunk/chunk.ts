@@ -1,6 +1,6 @@
 import { OpenAIEmbeddings } from "@langchain/openai";
 import nlp from "compromise";
-import { encoding_for_model } from "tiktoken";
+import { encodingForModel } from "js-tiktoken";
 
 function splitSentences(text: string): string[] {
     const doc = nlp(text);
@@ -16,7 +16,7 @@ async function embedSentences(sentences: string[]): Promise<number[][]> {
 }
 
 function semanticChunk(sentences: string[], embeddings: number[][], maxToken: number = 2000): string[][] {
-    const enc = encoding_for_model("gpt-4o-mini");
+    const enc = encodingForModel("gpt-4o-mini");
 
     try {
         let currentToken = 0, currentChunk: string[] = [];
@@ -63,8 +63,9 @@ function semanticChunk(sentences: string[], embeddings: number[][], maxToken: nu
             chunkResult.push(currentChunk);
         }
         return chunkResult
-    } finally {
-        enc.free();
+    } catch (error) {
+        console.log(error);
+        return [];
     }
 }
 

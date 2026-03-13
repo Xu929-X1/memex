@@ -3,13 +3,14 @@ import { ingestText } from "@/utils/AI/pipeline/ingest";
 import { chunk } from "@/utils/AI/semanticChunk/chunk";
 import { Root, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 
 export interface FileParseResult {
     sections: {
         sectionContent: string,
         headingContext: string,
-        codeBlocks?: string[],
+        codeBlocks: string[] | null,
         chunkIndex: number
     }[]
 }
@@ -19,7 +20,7 @@ const MARKDOWN_SECTION_STRATEGIES = {
         if (currentSectionContent.length > 0 || currentCodeBlocks.length > 0) {
             const headingContext = headingStack.map(h => h.val).join(" > ");
             const sectionContent = currentSectionContent.join("\n");
-            const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : undefined;
+            const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : null;
             sections.push({ sectionContent, headingContext, codeBlocks, chunkIndex: currentChunkIndex });
             currentSectionContent.splice(0, currentSectionContent.length)
             currentCodeBlocks.splice(0, currentCodeBlocks.length)
@@ -82,7 +83,7 @@ export async function parseMarkdown(file: File): Promise<FileParseResult> {
         if (currentSectionContent.length > 0 || currentCodeBlocks.length > 0) {
             const headingContext = headingStack.map(h => h.val).join(" > ");
             const sectionContent = currentSectionContent.join("\n");
-            const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : undefined;
+            const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : null;
             sections.push({ sectionContent, headingContext, codeBlocks, chunkIndex: sections.length });
         }
         return sections;
@@ -100,7 +101,8 @@ export async function parseText<T extends LLM>(text: string, LLMtype: T, config:
         const currentChunk = chunks[i].join(" ");
         const currentSections = await ingestText(currentChunk, lastHeadingContext, LLMtype, config);
         lastHeadingContext = currentSections.sections.at(-1)?.headingContext ?? "";
-        const offset = sections.length
+        const offset = sections.length;
+        console.log(currentSections);
         currentSections.sections.forEach(s => {
             sections.push({ ...s, chunkIndex: offset + s.chunkIndex })
         })
@@ -110,14 +112,21 @@ export async function parseText<T extends LLM>(text: string, LLMtype: T, config:
         sections
     };
 }
-
 export async function parsePDF<T extends LLM>(file: File, LLMtype: T, config: ModelConfig<T>): Promise<FileParseResult> {
     const fileContent = await file.arrayBuffer();
-    const buffer = Buffer.from(fileContent);
-    const pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer);
-    const pdfData = (await data.getText()).text;
-    const res = await parseText(pdfData, LLMtype, config);
-    return res;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.mjs";
+    const pdf = await pdfjsLib.getDocument({ data: fileContent }).promise;
+    console.log(pdf);
+    let fullText = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items
+            .map((item: any) => ("str" in item ? item.str : ""))
+            .join(" ");
+        fullText += pageText + "\n";
+    }
+    console.log(fullText);
+    return await parseText(fullText, LLMtype, config);
 }
 
