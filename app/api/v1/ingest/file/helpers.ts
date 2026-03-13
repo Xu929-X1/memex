@@ -47,6 +47,21 @@ const MARKDOWN_SECTION_STRATEGIES = {
     code: (node: RootContent, currentCodeBlocks: string[]) => {
         const codeNode = node as Extract<RootContent, { type: "code" }>;
         currentCodeBlocks.push(codeNode.value);
+    },
+    list: (node: RootContent, currentSectionContent: string[]) => {
+        const listNode = node as Extract<RootContent, { type: "list" }>;
+        for (const item of listNode.children) {
+            const texts: string[] = [];
+            function extractText(n: any) {
+                if (n.type === "text") texts.push(n.value);
+                if (n.type === "link") {
+                    if (n.children) n.children.forEach(extractText);
+                }
+                if (n.children) n.children.forEach(extractText);
+            }
+            item.children.forEach(extractText);
+            if (texts.length > 0) currentSectionContent.push(texts.join(" "));
+        }
     }
 } as const;
 
@@ -74,6 +89,8 @@ export async function parseMarkdown(file: File): Promise<FileParseResult> {
                             MARKDOWN_SECTION_STRATEGIES[nodeType](node, currentSectionContent);
                         } else if (nodeType === "code") {
                             MARKDOWN_SECTION_STRATEGIES[nodeType](node, currentCodeBlocks);
+                        } else if (nodeType === "list") {
+                            MARKDOWN_SECTION_STRATEGIES["list"](node, currentSectionContent);
                         }
                     }
                 }
@@ -102,7 +119,6 @@ export async function parseText<T extends LLM>(text: string, LLMtype: T, config:
         const currentSections = await ingestText(currentChunk, lastHeadingContext, LLMtype, config);
         lastHeadingContext = currentSections.sections.at(-1)?.headingContext ?? "";
         const offset = sections.length;
-        console.log(currentSections);
         currentSections.sections.forEach(s => {
             sections.push({ ...s, chunkIndex: offset + s.chunkIndex })
         })

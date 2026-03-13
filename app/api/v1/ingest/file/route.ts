@@ -12,7 +12,7 @@ import { FileParseResult, parseMarkdown, parsePDF, parseText } from "./helpers";
 
 export const SUPPORTED_FILE_TYPES = {
     PDF: "PDF",
-    MARKDOWN: "MD",
+    MARKDOWN: "MARKDOWN",
     TEXT: "TXT",
 }
 
@@ -21,6 +21,19 @@ const fileSchema = z.object({
     documentTitle: z.string().min(1, { message: "documentTitle is required" }),
     model: z.enum(["gpt-4o-mini", "gpt-4o", "claude-3-haiku-20240307", "claude-3-5-sonnet-20241022"])
 })
+
+function mapSuffixToFileType(suffix: string): string | null {
+    switch (suffix) {
+        case "pdf":
+            return SUPPORTED_FILE_TYPES.PDF;
+        case "md":
+            return SUPPORTED_FILE_TYPES.MARKDOWN;
+        case "txt":
+            return SUPPORTED_FILE_TYPES.TEXT;
+        default:
+            return null;
+    }
+}
 
 
 export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
@@ -54,7 +67,7 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
 
 
     const { file, documentTitle } = validationResult.data;
-    const documentType = file.name.split(".").pop();
+    const documentType = mapSuffixToFileType(file.name.split(".").pop() ?? "")?.toLowerCase();
     if (!documentType) {
         throw AppError.badRequest("File has no extension");
     }
