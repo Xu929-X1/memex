@@ -12,7 +12,7 @@ import { FileParseResult, parseMarkdown, parsePDF, parseText } from "./helpers";
 
 export const SUPPORTED_FILE_TYPES = {
     PDF: "PDF",
-    MARKDOWN: "MD",
+    MARKDOWN: "MARKDOWN",
     TEXT: "TXT",
 }
 
@@ -21,6 +21,19 @@ const fileSchema = z.object({
     documentTitle: z.string().min(1, { message: "documentTitle is required" }),
     model: z.enum(["gpt-4o-mini", "gpt-4o", "claude-3-haiku-20240307", "claude-3-5-sonnet-20241022"])
 })
+
+function mapSuffixToFileType(suffix: string): string | null {
+    switch (suffix) {
+        case "pdf":
+            return SUPPORTED_FILE_TYPES.PDF;
+        case "md":
+            return SUPPORTED_FILE_TYPES.MARKDOWN;
+        case "txt":
+            return SUPPORTED_FILE_TYPES.TEXT;
+        default:
+            return null;
+    }
+}
 
 
 export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
@@ -54,7 +67,7 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
 
 
     const { file, documentTitle } = validationResult.data;
-    const documentType = file.name.split(".").pop();
+    const documentType = mapSuffixToFileType(file.name.split(".").pop() ?? "")?.toLowerCase();
     if (!documentType) {
         throw AppError.badRequest("File has no extension");
     }
@@ -73,6 +86,13 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
         default:
             throw AppError.badRequest("Unsupported file type");
     }
+    const embedder = new OpenAIEmbeddings({
+        model: 'text-embedding-3-small',
+        apiKey: process.env.OPENAI_API_KEY
+    })
+    const embeddings = await embedder.embedDocuments(
+        parseResult.sections.map(s => s.sectionContent)
+    )
     return await prisma.$transaction(async (tx) => {
         //save document
         const document = await tx.document.create({
@@ -83,18 +103,15 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
                 userId: userId
             }
         })
-        //save sections
-        const embedder = new OpenAIEmbeddings({
-            model: 'text-embedding-3-small',
-            apiKey: process.env.OPENAI_API_KEY
-        })
-        const embeddings = await embedder.embedDocuments(
-            parseResult.sections.map(s => s.sectionContent)
-        )
+
         for (let i = 0; i < parseResult.sections.length; i++) {
             const item = parseResult.sections[i];
+            const vectorStr = `[${embeddings[i].join(",")}]`;
+
             await tx.$executeRaw` INSERT INTO "DocumentSection" ("documentId", "sectionContent", "headingContext", "chunkIndex", "sectionVector")
-    VALUES ( ${document.id}, ${item.sectionContent}, ${item.headingContext}, ${item.chunkIndex}, ${embeddings[i]}::vector)`
+    VALUES ( ${document.id}, ${item.sectionContent}, ${item.headingContext}, ${item.chunkIndex}, ${vectorStr}::vector)`
         }
+
+        return { documentId: document.id }
     })
 });

@@ -6,10 +6,9 @@ export const AUTH_TOKEN_KEY = "auth_token";
 const AUTH_PAGES = ['/login', '/register'];
 
 export async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl;
+    const pathname = request.url;
     const token = request.cookies.get(AUTH_TOKEN_KEY)?.value;
-    const isAuthPage = AUTH_PAGES.some(p => pathname.startsWith(p));
-
+    const isAuthPage = AUTH_PAGES.some(p => pathname.endsWith(p));
     if (!token) {
         if (request.nextUrl.pathname.startsWith('/api')) {
             console.log("Intercepted unauthorized")
