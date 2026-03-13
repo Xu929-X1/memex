@@ -52,7 +52,7 @@ export async function rerank(retrievalResults: RetrievalResult[], query: string,
         model: "rerank-multilingual-v3.0",
 
     })
-    return rerankResult.results.map(r => retrievalResults[r.index]);
+    return rerankResult.results.map(r => retrievalResults[r.index]).filter(r => r.similarity > 0.3);
 }
 
 export default async function retrieval(query: string, userId: string, candidateTopN: number, rerankTopN: number) {
