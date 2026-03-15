@@ -60,3 +60,13 @@ export default async function retrieval(query: string, userId: string, candidate
     const reranked = await rerank(candidates, query, rerankTopN);
     return reranked;
 }
+
+export async function getDocumentList(userId: string) {
+    const documents = await prisma.document.findMany({
+        where: {
+            userId: userId
+        }
+    });
+
+    return documents;
+}
