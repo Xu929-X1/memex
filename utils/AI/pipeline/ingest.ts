@@ -12,7 +12,6 @@ const ingestTextOutputSchema = z.object({
     }))
 })
 
-//This is the bottleneck
 export async function ingestText<T extends LLM>(
     input: string,
     LLMType: T,
