@@ -1,8 +1,7 @@
 import { FileParseResult } from "@/app/api/v1/ingest/file/helpers";
-import { HumanMessage, SystemMessage } from "langchain";
+import { HumanMessage } from "langchain";
 import * as z from "zod";
 import { createModel, LLM, ModelConfig } from "../model";
-import { buildTextParserPrompt } from "../prompts";
 
 const ingestTextOutputSchema = z.object({
     sections: z.array(z.object({
@@ -13,16 +12,13 @@ const ingestTextOutputSchema = z.object({
     }))
 })
 
-//This is the bottleneck
 export async function ingestText<T extends LLM>(
     input: string,
-    lastHeadingContext: string,
     LLMType: T,
     config: ModelConfig<T>
 ): Promise<FileParseResult> {
     const model = createModel(LLMType, config);
     const conversations = [
-        new SystemMessage(buildTextParserPrompt(lastHeadingContext)),
         new HumanMessage(input)
     ];
 

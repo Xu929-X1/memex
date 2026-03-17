@@ -1,6 +1,7 @@
 import { LLM, ModelConfig } from "@/utils/AI/model";
 import { ingestText } from "@/utils/AI/pipeline/ingest";
 import { chunk } from "@/utils/AI/semanticChunk/chunk";
+import { AppError } from "@/utils/api/Errors";
 import { Root, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
@@ -113,16 +114,13 @@ export async function parseMarkdown(file: File): Promise<FileParseResult> {
 export async function parseText<T extends LLM>(text: string, LLMtype: T, config: ModelConfig<T>): Promise<FileParseResult> {
     const sections: FileParseResult["sections"] = [];
     const chunks = await chunk(text);
-    let lastHeadingContext = "Beginning of the documment"
-    for (let i = 0; i < chunks.length; i++) {
-        const currentChunk = chunks[i].join(" ");
-        const currentSections = await ingestText(currentChunk, lastHeadingContext, LLMtype, config);
-        lastHeadingContext = currentSections.sections.at(-1)?.headingContext ?? "";
-        const offset = sections.length;
-        currentSections.sections.forEach(s => {
-            sections.push({ ...s, chunkIndex: offset + s.chunkIndex })
+    const results = await Promise.all(chunks.map((chunk) => ingestText(chunk.join(" "), LLMtype, config)))
+    let globalIndex = 0;
+    results.forEach((result) => {
+        result.sections.forEach(s => {
+            sections.push({ ...s, chunkIndex: globalIndex++ })
         })
-    }
+    })
 
     return {
         sections
@@ -132,7 +130,6 @@ export async function parsePDF<T extends LLM>(file: File, LLMtype: T, config: Mo
     const fileContent = await file.arrayBuffer();
     pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.mjs";
     const pdf = await pdfjsLib.getDocument({ data: fileContent }).promise;
-    console.log(pdf);
     let fullText = "";
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -142,7 +139,9 @@ export async function parsePDF<T extends LLM>(file: File, LLMtype: T, config: Mo
             .join(" ");
         fullText += pageText + "\n";
     }
-    console.log(fullText);
+    if (fullText.trim().length < 100) {
+        throw AppError.badRequest("PDF appears to be image-based and cannot be parsed. Please use a text-based PDF.");
+    }
     return await parseText(fullText, LLMtype, config);
 }
 
