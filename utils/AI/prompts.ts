@@ -6,7 +6,7 @@ Divide the input into sections and output ONLY valid JSON in this exact format:
 {
   "sections": [
     {
-      "sectionContent": "content of the section",
+      "sectionContent": "exact text from the input, do NOT summarize or paraphrase",
       "headingContext": "heading path e.g. Introduction > Background",
       "chunkIndex": 0,
       "codeBlocks": ["code block content"]
