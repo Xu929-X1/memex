@@ -113,5 +113,7 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
         }
 
         return { documentId: document.id }
+    }, {
+        timeout: 30000,
     })
 });
