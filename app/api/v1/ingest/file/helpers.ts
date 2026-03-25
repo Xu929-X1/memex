@@ -1,5 +1,3 @@
-import { LLM, ModelConfig } from "@/utils/AI/model";
-import { ingestText } from "@/utils/AI/pipeline/ingest";
 import { chunk } from "@/utils/AI/semanticChunk/chunk";
 import { AppError } from "@/utils/api/Errors";
 import { Root, RootContent } from "mdast";
@@ -10,7 +8,6 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 export interface FileParseResult {
     sections: {
         sectionContent: string,
-        headingContext: string,
         codeBlocks: string[] | null,
         chunkIndex: number
     }[]
@@ -22,7 +19,7 @@ const MARKDOWN_SECTION_STRATEGIES = {
             const headingContext = headingStack.map(h => h.val).join(" > ");
             const sectionContent = currentSectionContent.join("\n");
             const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : null;
-            sections.push({ sectionContent, headingContext, codeBlocks, chunkIndex: currentChunkIndex });
+            sections.push({ sectionContent, codeBlocks, chunkIndex: currentChunkIndex });
             currentSectionContent.splice(0, currentSectionContent.length)
             currentCodeBlocks.splice(0, currentCodeBlocks.length)
         }
@@ -102,7 +99,7 @@ export async function parseMarkdown(file: File): Promise<FileParseResult> {
             const headingContext = headingStack.map(h => h.val).join(" > ");
             const sectionContent = currentSectionContent.join("\n");
             const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : null;
-            sections.push({ sectionContent, headingContext, codeBlocks, chunkIndex: sections.length });
+            sections.push({ sectionContent, codeBlocks, chunkIndex: sections.length });
         }
         return sections;
     }
@@ -111,22 +108,18 @@ export async function parseMarkdown(file: File): Promise<FileParseResult> {
 }
 
 
-export async function parseText<T extends LLM>(text: string, LLMtype: T, config: ModelConfig<T>): Promise<FileParseResult> {
-    const sections: FileParseResult["sections"] = [];
+export async function parseText(text: string): Promise<FileParseResult> {
     const chunks = await chunk(text);
-    const results = await Promise.all(chunks.map((chunk) => ingestText(chunk.join(" "), LLMtype, config)))
-    let globalIndex = 0;
-    results.forEach((result) => {
-        result.sections.forEach(s => {
-            sections.push({ ...s, chunkIndex: globalIndex++ })
-        })
-    })
 
-    return {
-        sections
-    };
+    const sections = chunks.map((c, i) => ({
+        sectionContent: c.join(" "),
+        chunkIndex: i,
+        codeBlocks: null //TODO: Will Support in the Future 
+    }));
+
+    return { sections: sections };
 }
-export async function parsePDF<T extends LLM>(file: File, LLMtype: T, config: ModelConfig<T>): Promise<FileParseResult> {
+export async function parsePDF(file: File): Promise<FileParseResult> {
     const fileContent = await file.arrayBuffer();
     pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.mjs";
     const pdf = await pdfjsLib.getDocument({ data: fileContent }).promise;
@@ -142,6 +135,6 @@ export async function parsePDF<T extends LLM>(file: File, LLMtype: T, config: Mo
     if (fullText.trim().length < 100) {
         throw AppError.badRequest("PDF appears to be image-based and cannot be parsed. Please use a text-based PDF.");
     }
-    return await parseText(fullText, LLMtype, config);
+    return await parseText(fullText);
 }
 

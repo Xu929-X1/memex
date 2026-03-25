@@ -6,6 +6,7 @@ model User {
 
     documents       Document[]
     thirdPartyAuths ThirdPartyAuth[]
+    apikeys         APIKey[]
 }
 
 enum AuthProvider {

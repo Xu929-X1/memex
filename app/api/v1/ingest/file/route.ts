@@ -74,14 +74,14 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
     let parseResult: FileParseResult
     switch (documentType) {
         case SUPPORTED_FILE_TYPES.PDF.toLowerCase():
-            parseResult = await parsePDF(file, llmType, llmConfig);
+            parseResult = await parsePDF(file);
             break;
         case SUPPORTED_FILE_TYPES.MARKDOWN.toLowerCase():
             parseResult = await parseMarkdown(file);
             break;
         case SUPPORTED_FILE_TYPES.TEXT.toLowerCase():
             const text = await file.text()
-            parseResult = await parseText(text, llmType, llmConfig)
+            parseResult = await parseText(text)
             break;
         default:
             throw AppError.badRequest("Unsupported file type");
@@ -109,7 +109,7 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
             const vectorStr = `[${embeddings[i].join(",")}]`;
 
             await tx.$executeRaw` INSERT INTO "DocumentSection" ("documentId", "sectionContent", "headingContext", "chunkIndex", "sectionVector")
-    VALUES ( ${document.id}, ${item.sectionContent}, ${item.headingContext}, ${item.chunkIndex}, ${vectorStr}::vector)`
+    VALUES ( ${document.id}, ${item.sectionContent}, ${item.chunkIndex}, ${vectorStr}::vector)`
         }
 
         return { documentId: document.id }
