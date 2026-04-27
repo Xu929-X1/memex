@@ -1,4 +1,4 @@
-import { CUSTOM_USER_HEADER_KEY } from "@/middleware";
+import { CUSTOM_USER_HEADER_KEY } from "@/proxy";
 import { retrievalWithoutBM25 } from "@/utils/AI/pipeline/retrieval";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";

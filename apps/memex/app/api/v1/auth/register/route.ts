@@ -1,4 +1,4 @@
-import { AUTH_TOKEN_KEY } from "@/middleware";
+import { AUTH_TOKEN_KEY } from "@/proxy";
 import { generateToken } from "@/utils/api/auth/token";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";

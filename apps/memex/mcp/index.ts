@@ -18,11 +18,12 @@ server.registerTool("Retrieve", {
     }
 }, async ({ query, candidateTopN, rerankTopN }) => {
     const userId = process.env.MEMEX_USER_ID as string;
+    console.log("Start to retrieve");
     const results = await retrieval(query, userId, candidateTopN, rerankTopN);
     return {
         content: results.map(r => ({
             type: "text",
-            text: `[${r.headingContext}]\n${r.sectionContent}`
+            text: `${r.sectionContent}`
         }))
     };
 })

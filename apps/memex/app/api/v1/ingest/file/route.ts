@@ -1,5 +1,5 @@
-import { CUSTOM_USER_HEADER_KEY } from "@/middleware";
 import { SourceType } from "@/prisma/schema/client/enums";
+import { CUSTOM_USER_HEADER_KEY } from "@/proxy";
 import { LLM } from "@/utils/AI/model";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";

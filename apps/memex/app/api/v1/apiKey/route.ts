@@ -1,4 +1,4 @@
-import { CUSTOM_USER_HEADER_KEY } from "@/middleware";
+import { CUSTOM_USER_HEADER_KEY } from "@/proxy";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";
 import { prisma } from "@/utils/prisma/prisma";

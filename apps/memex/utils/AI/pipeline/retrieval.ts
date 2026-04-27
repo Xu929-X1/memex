@@ -1,3 +1,4 @@
+import { Prisma } from "@/prisma/schema/client/client";
 import { prisma } from "@/utils/prisma/prisma";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { CohereClient } from 'cohere-ai';
@@ -6,7 +7,6 @@ export interface RetrievalResult {
     documentId: string;
     documentTitle: string;
     sectionContent: string;
-    headingContext: string;
     similarity: number;
 }
 
@@ -29,7 +29,6 @@ export async function vectorSearch(
             ds."documentId",
             d."documentTitle",
             ds."sectionContent",
-            ds."headingContext",
             1 - (ds."sectionVector" <=> ${vectorStr}::vector) as similarity
         FROM "DocumentSection" ds
         JOIN "Document" d ON ds."documentId" = d.id
@@ -46,22 +45,23 @@ async function bm25Search(
     userId: string,
     topN: number = 20
 ): Promise<RetrievalResult[]> {
-    const results = await prisma.$queryRaw<RetrievalResult[]>`
+    const results = await prisma.$queryRaw<RetrievalResult[]>(
+        Prisma.sql`
         SELECT 
             ds.id as "sectionId",
             ds."documentId",
             d."documentTitle",
             ds."sectionContent",
-            ds."headingContext",
-            ts_rank(ds."searchVector", plainto_tsquery('simple', ${query})) as similarity
+            ts_rank(ds."sectionVector"::tsvector, plainto_tsquery('simple', ${query})) as similarity
         FROM "DocumentSection" ds
         JOIN "Document" d ON ds."documentId" = d.id
         WHERE d."userId" = ${userId}
-            AND ds."searchVector" @@ plainto_tsquery('simple', ${query})
+            AND ds."sectionVector"::tsvector @@ plainto_tsquery('simple', ${query})
         ORDER BY similarity DESC
-        LIMIT ${topN}
-    `;
-
+        LIMIT ${Prisma.raw(String(topN))}
+    `
+    );
+    console.log(results);
     return results;
 }
 

@@ -1,4 +1,4 @@
-import { AUTH_TOKEN_KEY } from "@/middleware";
+import { AUTH_TOKEN_KEY } from "@/proxy";
 import { withApiHandler } from "@/utils/api/withApiHandlers";
 import { NextResponse } from "next/server";
 

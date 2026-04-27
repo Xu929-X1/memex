@@ -1,0 +1,16 @@
+{
+  "name": "memex-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm -w @memex/web run dev",
+    "dev:ext": "npm -w @memex/extension run dev",
+    "build:web": "npm -w @memex/web run build",
+    "build:ext": "npm -w @memex/extension run build",
+    "lint": "npm -ws --if-present run lint"
+  }
+}

@@ -1,4 +1,4 @@
-import { AUTH_TOKEN_KEY } from "@/middleware";
+import { AUTH_TOKEN_KEY } from "@/proxy";
 import { generateToken } from "@/utils/api/auth/token";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";
@@ -15,6 +15,7 @@ const loginSchema = z.object({
 export const POST = withApiHandler(async (request: NextRequest) => {
     const payload = await request.json();
     const validatedPayload = await loginSchema.safeParse(payload);
+    console.log(await bcrypt.hash("NIHAOMA199663", 10));
     if (validatedPayload.error) {
         throw AppError.unauthorized("Invalid Credentials")
     }
