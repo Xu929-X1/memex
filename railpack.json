@@ -3,7 +3,7 @@
     "steps": {
         "install": {
             "commands": [
-                "npm install"
+                "npm ci"
             ]
         },
         "build": {
@@ -18,6 +18,6 @@
         }
     },
     "deploy": {
-        "startCommand": "cd apps/web && node_modules/.bin/next start"
+        "startCommand": "npm -w @memex/web start -- -p $PORT"
     }
 }
