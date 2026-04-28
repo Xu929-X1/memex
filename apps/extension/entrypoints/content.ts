@@ -1,6 +1,13 @@
 export default defineContentScript({
-  matches: ['*://*.google.com/*'],
+  matches: ['*'],
   main() {
-    console.log('Hello content.');
+    //
+    document.addEventListener("mouseup", () => {
+      const text = window.getSelection()?.toString();
+      if (text) {
+        console.log(text);
+      }
+    });
+
   },
 });
