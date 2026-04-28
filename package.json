@@ -11,6 +11,7 @@
     "dev:ext": "npm -w @memex/extension run dev",
     "build:web": "npm -w @memex/web run build",
     "build:ext": "npm -w @memex/extension run build",
-    "lint": "npm -ws --if-present run lint"
+    "lint": "npm -ws --if-present run lint",
+    "mcp": "npm -w @memex/web run mcp"
   }
 }

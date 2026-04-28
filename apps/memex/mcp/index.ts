@@ -1,3 +1,4 @@
+//this is for local usage. 
 import retrieval, { getDocumentList } from "@/utils/AI/pipeline/retrieval";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -17,8 +18,8 @@ server.registerTool("Retrieve", {
         rerankTopN: z.number().default(5)
     }
 }, async ({ query, candidateTopN, rerankTopN }) => {
+
     const userId = process.env.MEMEX_USER_ID as string;
-    console.log("Start to retrieve");
     const results = await retrieval(query, userId, candidateTopN, rerankTopN);
     return {
         content: results.map(r => ({
