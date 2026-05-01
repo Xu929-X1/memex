@@ -20,10 +20,11 @@ enum SourceType {
 }
 
 model DocumentSection {
-  id             Int                         @id @default(autoincrement())
+  id             Int                          @id @default(autoincrement())
   documentId     String
-  document       Document                    @relation(fields: [documentId], references: [id])
+  document       Document                     @relation(fields: [documentId], references: [id])
   sectionContent String
   sectionVector  Unsupported("vector(1536)")
+  searchVector   Unsupported("tsvector")?
   chunkIndex     Int
 }

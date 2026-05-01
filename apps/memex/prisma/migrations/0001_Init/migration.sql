@@ -1,6 +1,8 @@
-◇ injected env (6) from .env.local // tip: ⌁ auth for agents [www.vestauth.com]
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
+
+-- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- CreateEnum
 CREATE TYPE "SourceType" AS ENUM ('PDF', 'NOTION', 'WEB', 'MARKDOWN', 'TEXT');

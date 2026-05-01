@@ -9,9 +9,12 @@
   "scripts": {
     "dev:web": "npm -w @memex/web run dev",
     "dev:ext": "npm -w @memex/extension run dev",
+    "dev:mcp": "npm -w @memex/mcp run dev",
     "build:web": "npm -w @memex/web run build",
     "build:ext": "npm -w @memex/extension run build",
+    "build:mcp": "npm -w @memex/mcp run build",
     "lint": "npm -ws --if-present run lint",
-    "mcp": "npm -w @memex/web run mcp"
+    "mcp:local": "npm -w @memex/web run mcp",
+    "migrate:dev": "npx -w @memex/web prisma migrate dev"
   }
 }
