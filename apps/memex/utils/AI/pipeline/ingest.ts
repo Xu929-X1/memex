@@ -6,7 +6,6 @@ import { createModel, LLM, ModelConfig } from "../model";
 const ingestTextOutputSchema = z.object({
     sections: z.array(z.object({
         sectionContent: z.string().describe("Summarized section content"),
-        headingContext: z.string().describe("Heading context of current section"),
         codeBlocks: z.array(z.string()).nullable().describe("If code blocks exists in the text this is where it goes"),
         chunkIndex: z.number().describe("Chunk index, start with 0")
     }))

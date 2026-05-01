@@ -1,11 +1,13 @@
 import { defineConfig } from 'wxt';
 
-// See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
-  dev: {
-    server: {
-      port: 5173,
-    },
+  manifest: {
+    permissions: ['cookies', 'storage'],
+    host_permissions: [
+      'http://localhost:3001/*',
+      'https://memex.up.railway.app/*',
+    ],
   },
+  dev: { server: { port: 5173 } },
 });

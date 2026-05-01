@@ -1,3 +1,6 @@
+import { TabSession } from "./type";
+
+const sessions = new Map<number, TabSession>();
 export default defineBackground(() => {
-  console.log('Hello background!', { id: browser.runtime.id });
+
 });

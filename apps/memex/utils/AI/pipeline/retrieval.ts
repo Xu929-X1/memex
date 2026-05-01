@@ -47,21 +47,20 @@ async function bm25Search(
 ): Promise<RetrievalResult[]> {
     const results = await prisma.$queryRaw<RetrievalResult[]>(
         Prisma.sql`
-        SELECT 
-            ds.id as "sectionId",
-            ds."documentId",
-            d."documentTitle",
-            ds."sectionContent",
-            ts_rank(ds."sectionVector"::tsvector, plainto_tsquery('simple', ${query})) as similarity
-        FROM "DocumentSection" ds
-        JOIN "Document" d ON ds."documentId" = d.id
-        WHERE d."userId" = ${userId}
-            AND ds."sectionVector"::tsvector @@ plainto_tsquery('simple', ${query})
-        ORDER BY similarity DESC
-        LIMIT ${Prisma.raw(String(topN))}
+      SELECT 
+        ds.id as "sectionId",
+        ds."documentId",
+        d."documentTitle",
+        ds."sectionContent",
+        ts_rank(ds."searchVector", plainto_tsquery('simple', ${query})) as similarity
+      FROM "DocumentSection" ds
+      JOIN "Document" d ON ds."documentId" = d.id
+      WHERE d."userId" = ${userId}
+        AND ds."searchVector" @@ plainto_tsquery('simple', ${query})
+      ORDER BY similarity DESC
+      LIMIT ${Prisma.raw(String(topN))}
     `
     );
-    console.log(results);
     return results;
 }
 
@@ -78,7 +77,9 @@ export async function hybridSearch(
         vectorSearch(query, userId, topN),
         bm25Search(query, userId, topN)
     ]);
-
+    console.error("vectorResults count:", vectorResults.length);
+    console.error("bm25Results count:", bm25Results.length);
+    console.error("userId used:", userId);
     const scores = new Map<string, { result: RetrievalResult; score: number }>();
 
     vectorResults.forEach((r, i) => {
@@ -102,18 +103,25 @@ export async function hybridSearch(
         .map(v => v.result);
 }
 
-export async function rerank(retrievalResults: RetrievalResult[], query: string, take: number = 5): Promise<RetrievalResult[]> {
-    const cohere = new CohereClient({
-        token: process.env.COHERE_API_KEY
-    });
+export async function rerank(
+    retrievalResults: RetrievalResult[],
+    query: string,
+    take: number = 5
+): Promise<RetrievalResult[]> {
+    const cohere = new CohereClient({ token: process.env.COHERE_API_KEY });
     const rerankResult = await cohere.rerank({
-        documents: retrievalResults.map(item => { return { "text": item.sectionContent } }),
+        documents: retrievalResults.map(item => ({ text: item.sectionContent })),
         query,
         topN: take,
         model: "rerank-multilingual-v3.0",
-
-    })
-    return rerankResult.results.map(r => retrievalResults[r.index]).filter(r => r.similarity > 0.3);
+    });
+    console.error("Rerank result:", rerankResult);
+    return rerankResult.results
+        .map(r => ({
+            ...retrievalResults[r.index],
+            similarity: r.relevanceScore
+        }))
+        .filter(r => r.similarity > 0.3);
 }
 
 export default async function retrieval(query: string, userId: string, candidateTopN: number, rerankTopN: number) {

@@ -108,8 +108,8 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
             const item = parseResult.sections[i];
             const vectorStr = `[${embeddings[i].join(",")}]`;
 
-            await tx.$executeRaw` INSERT INTO "DocumentSection" ("documentId", "sectionContent", "headingContext", "chunkIndex", "sectionVector")
-    VALUES ( ${document.id}, ${item.sectionContent}, ${item.chunkIndex}, ${vectorStr}::vector)`
+            await tx.$executeRaw`INSERT INTO "DocumentSection" ("documentId", "sectionContent", "chunkIndex", "sectionVector")
+    VALUES (${document.id}, ${item.sectionContent}, ${item.chunkIndex}, ${vectorStr}::vector)`
         }
 
         return { documentId: document.id }

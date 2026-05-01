@@ -1,0 +1,40 @@
+enum SeesionType {
+    WEB
+}
+
+model Session {
+    id             String          @id @default(cuid())
+    userId         String
+    user           User            @relation(fields: [userId], references: [id])
+    type           SeesionType
+    title          String?
+    url            String
+    startedAt      DateTime        @default(now())
+    endedAt        DateTime
+    activeDwellMs  Int             @default(0)
+    scrollDepth    Float           @default(0)
+    reopenCount    Int             @default(0)
+    sessionActions SessionAction[]
+
+    @@index([userId, startedAt])
+}
+
+enum SessionActionType {
+    HIGHLIGHT
+    COPY
+    PASTE
+    SCROLL
+    SEARCH
+    CLICK_OUT
+}
+
+model SessionAction {
+    id        String            @id @default(cuid())
+    sessionId String
+    session   Session           @relation(fields: [sessionId], references: [id])
+    type      SessionActionType
+    payload   Json?
+    createdAt DateTime          @default(now())
+
+    @@index([sessionId, createdAt])
+}
