@@ -10,6 +10,8 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { FileParseResult, parseMarkdown, parsePDF, parseText } from "./helpers";
 
+export const runtime = "nodejs";
+
 export const SUPPORTED_FILE_TYPES = {
     PDF: "PDF",
     MARKDOWN: "MARKDOWN",
