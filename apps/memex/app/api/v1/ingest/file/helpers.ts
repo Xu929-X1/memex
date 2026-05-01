@@ -2,20 +2,20 @@ import { chunk } from "@/utils/AI/semanticChunk/chunk";
 import { AppError } from "@/utils/api/Errors";
 import { Root, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { createRequire } from "node:module";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
-const require = createRequire(import.meta.url);
+let standardFontDataUrlCache: string | null = null;
 
-function resolvePdfjsAsset(subpath: string): string {
-    const pkgPath = require.resolve("pdfjs-dist/package.json");
-    const url = pathToFileURL(path.join(path.dirname(pkgPath), subpath)).href;
-    return url.endsWith("/") ? url : `${url}/`;
+function getStandardFontDataUrl(): string {
+    if (standardFontDataUrlCache) return standardFontDataUrlCache;
+    const nodeRequire = eval("require") as NodeRequire;
+    const pkgPath = nodeRequire.resolve("pdfjs-dist/package.json");
+    const url = pathToFileURL(path.join(path.dirname(pkgPath), "standard_fonts/")).href;
+    standardFontDataUrlCache = url.endsWith("/") ? url : `${url}/`;
+    return standardFontDataUrlCache;
 }
-
-const STANDARD_FONT_DATA_URL = resolvePdfjsAsset("standard_fonts/");
 
 
 export interface FileParseResult {
@@ -137,7 +137,7 @@ export async function parsePDF(file: File): Promise<FileParseResult> {
     pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.mjs";
     const pdf = await pdfjsLib.getDocument({
         data: fileContent,
-        standardFontDataUrl: STANDARD_FONT_DATA_URL,
+        standardFontDataUrl: getStandardFontDataUrl(),
     }).promise;
     let fullText = "";
     for (let i = 1; i <= pdf.numPages; i++) {
