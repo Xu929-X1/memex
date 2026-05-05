@@ -1,40 +1,40 @@
-enum SeesionType {
-    WEB
-}
-
 model Session {
-    id             String          @id @default(cuid())
-    userId         String
-    user           User            @relation(fields: [userId], references: [id])
-    type           SeesionType
-    title          String?
-    url            String
-    startedAt      DateTime        @default(now())
-    endedAt        DateTime
-    activeDwellMs  Int             @default(0)
-    scrollDepth    Float           @default(0)
-    reopenCount    Int             @default(0)
-    sessionActions SessionAction[]
+  id             String          @id @default(cuid())
+  userId         String
+  type           SeesionType
+  title          String?
+  url            String
+  startedAt      DateTime        @default(now())
+  endedAt        DateTime
+  activeDwellMs  Int             @default(0)
+  scrollDepth    Float           @default(0)
+  reopenCount    Int             @default(0)
+  user           User            @relation(fields: [userId], references: [id])
+  sessionActions SessionAction[]
 
-    @@index([userId, startedAt])
-}
-
-enum SessionActionType {
-    HIGHLIGHT
-    COPY
-    PASTE
-    SCROLL
-    SEARCH
-    CLICK_OUT
+  @@index([userId, startedAt])
 }
 
 model SessionAction {
-    id        String            @id @default(cuid())
-    sessionId String
-    session   Session           @relation(fields: [sessionId], references: [id])
-    type      SessionActionType
-    payload   Json?
-    createdAt DateTime          @default(now())
+  id        String            @id @default(cuid())
+  sessionId String
+  type      SessionActionType
+  payload   Json?
+  createdAt DateTime          @default(now())
+  session   Session           @relation(fields: [sessionId], references: [id])
 
-    @@index([sessionId, createdAt])
+  @@index([sessionId, createdAt])
+}
+
+enum SeesionType {
+  WEB
+}
+
+enum SessionActionType {
+  HIGHLIGHT
+  COPY
+  PASTE
+  SCROLL
+  SEARCH
+  CLICK_OUT
 }

@@ -1,14 +1,25 @@
 model Document {
-  id            String     @id @default(cuid())
-  userId        String
-  user          User       @relation(fields: [userId], references: [id])
-  documentTitle String
-  source        String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  sourceType    SourceType
-
+  id               String            @id @default(cuid())
+  userId           String
+  documentTitle    String
+  source           String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sourceType       SourceType
+  user             User              @relation(fields: [userId], references: [id])
   documentSections DocumentSection[]
+}
+
+model DocumentSection {
+  id             Int                      @id @default(autoincrement())
+  documentId     String
+  sectionContent String
+  sectionVector  Unsupported("vector")
+  chunkIndex     Int
+  searchVector   Unsupported("tsvector")? @default(dbgenerated("to_tsvector('simple'::regconfig, \"sectionContent\")"))
+  document       Document                 @relation(fields: [documentId], references: [id])
+
+  @@index([searchVector], map: "idx_document_section_search_vector", type: Gin)
 }
 
 enum SourceType {
@@ -17,14 +28,4 @@ enum SourceType {
   WEB
   MARKDOWN
   TEXT
-}
-
-model DocumentSection {
-  id             Int                          @id @default(autoincrement())
-  documentId     String
-  document       Document                     @relation(fields: [documentId], references: [id])
-  sectionContent String
-  sectionVector  Unsupported("vector(1536)")
-  searchVector   Unsupported("tsvector")?
-  chunkIndex     Int
 }
