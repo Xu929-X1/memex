@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, X, BookmarkPlus } from 'lucide-react';
+import { BookmarkPlus, Loader2, Plus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import {
@@ -9,6 +9,7 @@ import {
   getPreference,
   updatePreference,
 } from '../lib/api';
+export const SYNC_SITE_MESSAGE = "SYNC_SITE";
 
 function normalizeDomain(raw: string): string | null {
   const v = raw.trim().toLowerCase();
@@ -91,6 +92,7 @@ export default function Settings() {
     try {
       const next = await updatePreference(patch);
       setPref(next);
+      browser.runtime.sendMessage(SYNC_SITE_MESSAGE);
       return next;
     } catch (e) {
       setError((e as Error).message);

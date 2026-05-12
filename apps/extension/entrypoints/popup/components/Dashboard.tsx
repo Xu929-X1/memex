@@ -6,7 +6,6 @@ import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { fetchDocuments } from '../lib/api';
 import Settings from './Settings';
-
 interface DashboardProps {
   onSignOut: () => Promise<void> | void;
 }
