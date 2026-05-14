@@ -1,13 +1,14 @@
 model Document {
-  id               String            @id @default(cuid())
+  id               String             @id @default(cuid())
   userId           String
   documentTitle    String
   source           String
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   sourceType       SourceType
-  user             User              @relation(fields: [userId], references: [id])
+  user             User               @relation(fields: [userId], references: [id])
   documentSections DocumentSection[]
+  qualityRuns      ChunkQualityRun[]
 }
 
 model DocumentSection {
@@ -16,6 +17,9 @@ model DocumentSection {
   sectionContent String
   sectionVector  Unsupported("vector")
   chunkIndex     Int
+  kind           SectionKind              @default(TEXT)
+  pageStart      Int?
+  pageEnd        Int?
   searchVector   Unsupported("tsvector")? @default(dbgenerated("to_tsvector('simple'::regconfig, \"sectionContent\")"))
   document       Document                 @relation(fields: [documentId], references: [id])
 
@@ -28,4 +32,38 @@ enum SourceType {
   WEB
   MARKDOWN
   TEXT
+}
+
+enum SectionKind {
+  TEXT
+  TABLE
+  FIGURE
+}
+
+model ChunkQualityRun {
+  id                  String   @id @default(cuid())
+  documentId          String
+  createdAt           DateTime @default(now())
+  sourceType          SourceType
+  totalChunks         Int
+  textCount           Int
+  tableCount          Int
+  figureCount         Int
+  meanChars           Int
+  stddevChars         Int
+  p5Chars             Int
+  p95Chars            Int
+  tinyRate            Float
+  oversizedRate       Float
+  midSentenceRate     Float
+  whitespaceRate      Float
+  boundarySimilarity  Float?
+  score               Float
+  flags               Json
+  metrics             Json
+
+  document            Document @relation(fields: [documentId], references: [id])
+
+  @@index([documentId])
+  @@index([createdAt])
 }

@@ -9,6 +9,8 @@ import { ChatOpenAIFields, OpenAIEmbeddings } from "@langchain/openai";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { FileParseResult, parseMarkdown, parsePDF, parseText } from "./helpers";
+import { analyzeChunks } from "@/utils/AI/QC/analyzer";
+import type { InputJsonValue } from "@/prisma/schema/client/internal/prismaNamespace";
 
 export const runtime = "nodejs";
 
@@ -109,12 +111,38 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
         for (let i = 0; i < parseResult.sections.length; i++) {
             const item = parseResult.sections[i];
             const vectorStr = `[${embeddings[i].join(",")}]`;
+            const kind = item.kind ?? "TEXT";
+            const pageStart = item.pageStart ?? null;
+            const pageEnd = item.pageEnd ?? null;
 
-            await tx.$executeRaw`INSERT INTO "DocumentSection" ("documentId", "sectionContent", "chunkIndex", "sectionVector")
-    VALUES (${document.id}, ${item.sectionContent}, ${item.chunkIndex}, ${vectorStr}::vector)`
+            await tx.$executeRaw`INSERT INTO "DocumentSection" ("documentId", "sectionContent", "chunkIndex", "sectionVector", "kind", "pageStart", "pageEnd")
+    VALUES (${document.id}, ${item.sectionContent}, ${item.chunkIndex}, ${vectorStr}::vector, ${kind}::"SectionKind", ${pageStart}, ${pageEnd})`
         }
 
-        return { documentId: document.id }
+        const qcReport = analyzeChunks(parseResult.sections, embeddings);
+        const qcRun = await tx.chunkQualityRun.create({
+            data: {
+                documentId: document.id,
+                sourceType: documentType.toUpperCase() as SourceType,
+                totalChunks: qcReport.totalChunks,
+                textCount: qcReport.byKind.TEXT,
+                tableCount: qcReport.byKind.TABLE,
+                figureCount: qcReport.byKind.FIGURE,
+                meanChars: qcReport.sizeStats.meanChars,
+                stddevChars: qcReport.sizeStats.stddevChars,
+                p5Chars: qcReport.sizeStats.p5Chars,
+                p95Chars: qcReport.sizeStats.p95Chars,
+                tinyRate: qcReport.sizeStats.tinyRate,
+                oversizedRate: qcReport.sizeStats.oversizedRate,
+                midSentenceRate: qcReport.midSentenceRate,
+                whitespaceRate: qcReport.whitespaceRate,
+                boundarySimilarity: qcReport.boundarySimilarity,
+                score: qcReport.score,
+                flags: qcReport.flags as unknown as InputJsonValue,
+                metrics: qcReport as unknown as InputJsonValue,
+            },
+        });
+        return { documentId: document.id, qcRunId: qcRun.id, qcReport }
     }, {
         timeout: 30000,
     })

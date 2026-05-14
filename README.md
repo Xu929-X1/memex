@@ -170,7 +170,7 @@ MD   ──► mdast AST ──► heading hierarchy extraction
 TXT  ──────────────► semantic chunking (3000 chars)
                            │
                      LLM structured output
-                     (sectionContent, headingContext, chunkIndex)
+                     (sectionContent, chunkIndex)
                            │
                      OpenAI text-embedding-3-small (1536-dim)
                            │
