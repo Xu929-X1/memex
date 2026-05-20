@@ -2,34 +2,26 @@ import { chunk } from "@/utils/AI/semanticChunk/chunk";
 import { AppError } from "@/utils/api/Errors";
 import { Root, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import * as path from "node:path";
-import { pathToFileURL } from "node:url";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import { runPdfPipeline } from "@/utils/AI/pipeline/pdf";
 
-let standardFontDataUrlCache: string | null = null;
+export type SectionKind = "TEXT" | "TABLE" | "FIGURE";
 
-function getStandardFontDataUrl(): string {
-    if (standardFontDataUrlCache) return standardFontDataUrlCache;
-    const nodeRequire = eval("require") as NodeRequire;
-    const pkgPath = nodeRequire.resolve("pdfjs-dist/package.json");
-    const url = pathToFileURL(path.join(path.dirname(pkgPath), "standard_fonts/")).href;
-    standardFontDataUrlCache = url.endsWith("/") ? url : `${url}/`;
-    return standardFontDataUrlCache;
+export interface FileParseSection {
+    sectionContent: string;
+    codeBlocks: string[] | null;
+    chunkIndex: number;
+    kind?: SectionKind;
+    pageStart?: number | null;
+    pageEnd?: number | null;
 }
 
-
 export interface FileParseResult {
-    sections: {
-        sectionContent: string,
-        codeBlocks: string[] | null,
-        chunkIndex: number
-    }[]
+    sections: FileParseSection[];
 }
 
 const MARKDOWN_SECTION_STRATEGIES = {
-    heading: (node: RootContent, headingStack: { depth: number; val: string }[], sections: FileParseResult["sections"], currentSectionContent: string[], currentCodeBlocks: string[], currentChunkIndex: number) => {
+    heading: (node: RootContent, sections: FileParseResult["sections"], currentSectionContent: string[], currentCodeBlocks: string[], currentChunkIndex: number) => {
         if (currentSectionContent.length > 0 || currentCodeBlocks.length > 0) {
-            const headingContext = headingStack.map(h => h.val).join(" > ");
             const sectionContent = currentSectionContent.join("\n");
             const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : null;
             sections.push({ sectionContent, codeBlocks, chunkIndex: currentChunkIndex });
@@ -37,15 +29,11 @@ const MARKDOWN_SECTION_STRATEGIES = {
             currentCodeBlocks.splice(0, currentCodeBlocks.length)
         }
         const headingNode = node as Extract<RootContent, { type: "heading" }>;
-        const currentHeadingDepth = headingNode.depth;
-        while (headingStack.length > 0 && headingStack[headingStack.length - 1].depth >= currentHeadingDepth) {
-            headingStack.pop();
-        }
         const headingText = headingNode.children
             .filter(child => child.type === "text")
             .map(child => (child as Extract<RootContent, { type: "text" }>).value)
             .join(" ");
-        headingStack.push({ depth: currentHeadingDepth, val: headingText });
+        currentSectionContent.push(headingText);
     },
     paragraph: (node: RootContent, currentSectionContent: string[]) => {
         const paragraphNode = node as Extract<RootContent, { type: "paragraph" }>;
@@ -79,10 +67,6 @@ const MARKDOWN_SECTION_STRATEGIES = {
 export async function parseMarkdown(file: File): Promise<FileParseResult> {
     const fileContent = await file.text();
     const ast = fromMarkdown(fileContent);
-    const headingStack: {
-        depth: number;
-        val: string;
-    }[] = [];
     let currentCodeBlocks: string[] = [];
     let currentSectionContent: string[] = [];
     function extractSections(root: Root | RootContent): FileParseResult["sections"] {
@@ -95,7 +79,7 @@ export async function parseMarkdown(file: File): Promise<FileParseResult> {
                     const nodeType = node.type as keyof typeof MARKDOWN_SECTION_STRATEGIES;
                     if (nodeType in MARKDOWN_SECTION_STRATEGIES) {
                         if (nodeType === "heading") {
-                            MARKDOWN_SECTION_STRATEGIES[nodeType](node, headingStack, sections, currentSectionContent, currentCodeBlocks, sections.length);
+                            MARKDOWN_SECTION_STRATEGIES[nodeType](node, sections, currentSectionContent, currentCodeBlocks, sections.length);
                         } else if (nodeType === "paragraph") {
                             MARKDOWN_SECTION_STRATEGIES[nodeType](node, currentSectionContent);
                         } else if (nodeType === "code") {
@@ -109,7 +93,6 @@ export async function parseMarkdown(file: File): Promise<FileParseResult> {
 
         }
         if (currentSectionContent.length > 0 || currentCodeBlocks.length > 0) {
-            const headingContext = headingStack.map(h => h.val).join(" > ");
             const sectionContent = currentSectionContent.join("\n");
             const codeBlocks = currentCodeBlocks.length > 0 ? [...currentCodeBlocks] : null;
             sections.push({ sectionContent, codeBlocks, chunkIndex: sections.length });
@@ -134,23 +117,11 @@ export async function parseText(text: string): Promise<FileParseResult> {
 }
 export async function parsePDF(file: File): Promise<FileParseResult> {
     const fileContent = await file.arrayBuffer();
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.mjs";
-    const pdf = await pdfjsLib.getDocument({
-        data: fileContent,
-        standardFontDataUrl: getStandardFontDataUrl(),
-    }).promise;
-    let fullText = "";
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        const pageText = content.items
-            .map((item: any) => ("str" in item ? item.str : ""))
-            .join(" ");
-        fullText += pageText + "\n";
-    }
-    if (fullText.trim().length < 100) {
+    const { sections } = await runPdfPipeline(fileContent);
+    const totalText = sections.reduce((n, s) => n + s.sectionContent.length, 0);
+    if (totalText < 100) {
         throw AppError.badRequest("PDF appears to be image-based and cannot be parsed. Please use a text-based PDF.");
     }
-    return await parseText(fullText);
+    return { sections };
 }
 

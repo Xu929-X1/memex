@@ -170,7 +170,7 @@ MD   ──► mdast AST ──► 按标题层级提取章节
 TXT  ──────────────► 语义分块（3000 字符）
                            │
                      LLM 结构化输出
-                     (sectionContent, headingContext, chunkIndex)
+                     (sectionContent, chunkIndex)
                            │
                      OpenAI text-embedding-3-small（1536 维）
                            │
