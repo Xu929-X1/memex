@@ -1,7 +1,9 @@
 export default defineContentScript({
-  matches: ['*'],
-  main() {
-    //
+  matches: ['<all_urls>'],
+  main(ctx) {
+    //session related
+
+
     document.addEventListener("mouseup", () => {
       const text = window.getSelection()?.toString();
       if (text) {
@@ -9,5 +11,9 @@ export default defineContentScript({
       }
     });
 
+    //browser related
+    browser.storage.onChanged.addListener((changes) => {
+
+    });
   },
 });
