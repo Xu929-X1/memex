@@ -1,5 +1,4 @@
 FROM node:20-slim AS base
-ENV NODE_ENV=production
 
 FROM base AS deps
 WORKDIR /app
@@ -22,6 +21,7 @@ WORKDIR /app/apps/memex
 RUN npx prisma generate && npm run build
 
 FROM base AS runtime
+ENV NODE_ENV=production
 WORKDIR /app/apps/memex
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/memex/node_modules ./node_modules
