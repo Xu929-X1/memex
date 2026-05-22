@@ -1,6 +1,8 @@
 import { SourceType } from "@/prisma/schema/client/enums";
+import type { InputJsonValue } from "@/prisma/schema/client/internal/prismaNamespace";
 import { CUSTOM_USER_HEADER_KEY } from "@/proxy";
 import { LLM } from "@/utils/AI/model";
+import { analyzeChunks } from "@/utils/AI/QC/analyzer";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";
 import { prisma } from "@/utils/prisma/prisma";
@@ -9,15 +11,13 @@ import { ChatOpenAIFields, OpenAIEmbeddings } from "@langchain/openai";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { FileParseResult, parseMarkdown, parsePDF, parseText } from "./helpers";
-import { analyzeChunks } from "@/utils/AI/QC/analyzer";
-import type { InputJsonValue } from "@/prisma/schema/client/internal/prismaNamespace";
 
 export const runtime = "nodejs";
 
 export const SUPPORTED_FILE_TYPES = {
     PDF: "PDF",
     MARKDOWN: "MARKDOWN",
-    TEXT: "TXT",
+    TEXT: "TEXT",
 }
 
 const fileSchema = z.object({
