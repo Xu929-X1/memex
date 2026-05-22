@@ -30,4 +30,4 @@ COPY --from=build /app/apps/memex/public ./public
 COPY --from=build /app/apps/memex/package.json ./package.json
 COPY --from=build /app/apps/memex/prisma ./prisma
 EXPOSE 3000
-CMD ["npx", "next", "start", "-p", "3000"]
+CMD ["sh", "-c", "npx next start -p ${PORT:-3000}"]
