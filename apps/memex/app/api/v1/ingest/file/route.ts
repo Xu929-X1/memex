@@ -120,6 +120,8 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
         }
 
         const qcReport = analyzeChunks(parseResult.sections, embeddings);
+        const pdfFidelity = parseResult.pdfFidelity ?? null;
+        const metricsPayload = { ...qcReport, pdfFidelity };
         const qcRun = await tx.chunkQualityRun.create({
             data: {
                 documentId: document.id,
@@ -139,10 +141,10 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
                 boundarySimilarity: qcReport.boundarySimilarity,
                 score: qcReport.score,
                 flags: qcReport.flags as unknown as InputJsonValue,
-                metrics: qcReport as unknown as InputJsonValue,
+                metrics: metricsPayload as unknown as InputJsonValue,
             },
         });
-        return { documentId: document.id, qcRunId: qcRun.id, qcReport }
+        return { documentId: document.id, qcRunId: qcRun.id, qcReport, pdfFidelity }
     }, {
         timeout: 30000,
     })
