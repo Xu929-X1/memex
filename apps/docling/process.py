@@ -1,30 +1,14 @@
-"""PDF processor invoked by Node via spawn.
+"""Docling PDF processor — pure function, no I/O entrypoint.
 
-Usage: python process.py <pdf_path>
-Output: JSON to stdout with shape:
-{
-  "sections": [{ "sectionContent": str, "codeBlocks": null, "chunkIndex": int,
-                 "kind": "TEXT"|"TABLE"|"FIGURE", "pageStart": int, "pageEnd": int }],
-  "fidelity": { extractedChars, afterStripChars, afterClusterChars,
-                finalChunkChars, stripRetention, clusterRetention,
-                chunkRetention, overallRetention }
-}
-Errors go to stderr with non-zero exit.
+Reused by FastAPI service and any CLI/test caller. Output shape matches
+the legacy Node spawn contract so the web client deserializer is unchanged.
 """
 
 from __future__ import annotations
 
-import json
 import os
-import sys
 from pathlib import Path
 from typing import Any
-
-try:
-    sys.stdout.reconfigure(encoding="utf-8")
-    sys.stderr.reconfigure(encoding="utf-8")
-except (AttributeError, ValueError):
-    pass
 
 
 def _envFlag(name: str, default: bool) -> bool:
@@ -173,8 +157,14 @@ def _chunk_kind(chunk: Any) -> str:
     return "TEXT"
 
 
-def process(pdf_path: Path) -> dict:
-    from docling.chunking import HybridChunker
+_converter = None
+
+
+def _get_converter():
+    global _converter
+    if _converter is not None:
+        return _converter
+
     from docling.datamodel.accelerator_options import AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import LayoutOptions, PdfPipelineOptions
@@ -190,11 +180,18 @@ def process(pdf_path: Path) -> dict:
     pipeline_options.layout_options = LayoutOptions(model_spec=layout_spec)
     pipeline_options.accelerator_options = AcceleratorOptions(num_threads=num_threads)
 
-    converter = DocumentConverter(
+    _converter = DocumentConverter(
         format_options={
             InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
         },
     )
+    return _converter
+
+
+def process(pdf_path: Path) -> dict:
+    from docling.chunking import HybridChunker
+
+    converter = _get_converter()
     result = converter.convert(str(pdf_path))
     doc = result.document
 
@@ -264,25 +261,3 @@ def process(pdf_path: Path) -> dict:
     }
 
     return {"sections": sections, "fidelity": fidelity}
-
-
-def main() -> int:
-    if len(sys.argv) < 2:
-        print("usage: process.py <pdf_path>", file=sys.stderr)
-        return 2
-    pdf_path = Path(sys.argv[1])
-    if not pdf_path.is_file():
-        print(f"file not found: {pdf_path}", file=sys.stderr)
-        return 2
-    try:
-        payload = process(pdf_path)
-    except Exception as e:
-        print(f"docling processing failed: {type(e).__name__}: {e}", file=sys.stderr)
-        return 1
-    json.dump(payload, sys.stdout, ensure_ascii=False)
-    sys.stdout.write("\n")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
