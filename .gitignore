@@ -69,3 +69,5 @@ CLAUDE.md
 **/.venv/
 **/__pycache__/
 *.pyc
+
+DEPLOY.md

@@ -22,9 +22,14 @@ export const SUPPORTED_FILE_TYPES = {
 
 const fileSchema = z.object({
     file: z.instanceof(File, { message: "file must be an instance of File" }),
-    documentTitle: z.string().min(1, { message: "documentTitle is required" }),
+    documentTitle: z.string().optional(),
     model: z.enum(["gpt-4o-mini", "gpt-4o", "claude-3-haiku-20240307", "claude-3-5-sonnet-20241022"])
 })
+
+function stripExtension(filename: string): string {
+    const dot = filename.lastIndexOf(".");
+    return dot > 0 ? filename.slice(0, dot) : filename;
+}
 
 function mapSuffixToFileType(suffix: string): string | null {
     switch (suffix) {
@@ -49,9 +54,9 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
     if (!userId) {
         throw AppError.internal("Critical Authentication error happened, the request does not have ")
     }
-    const validationResult = fileSchema.safeParse({ file: requestFile, documentTitle: requestTitle, model: model });
+    const validationResult = fileSchema.safeParse({ file: requestFile, documentTitle: requestTitle || undefined, model: model });
     if (!validationResult.success) {
-        throw AppError.badRequest("Invalid request, required fields are: file, documentTitle and model");
+        throw AppError.badRequest("Invalid request, required fields are: file and model");
     }
     let llmType: LLM;
     let llmConfig: Partial<ChatOpenAIFields> | Partial<ChatAnthropicInput>;
@@ -71,24 +76,30 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
 
 
     const { file, documentTitle } = validationResult.data;
+    const resolvedTitle = documentTitle?.trim() || stripExtension(file.name);
     const documentType = mapSuffixToFileType(file.name.split(".").pop() ?? "")?.toLowerCase();
     if (!documentType) {
         throw AppError.badRequest("File has no extension");
     }
     let parseResult: FileParseResult
-    switch (documentType) {
-        case SUPPORTED_FILE_TYPES.PDF.toLowerCase():
-            parseResult = await parsePDF(file);
-            break;
-        case SUPPORTED_FILE_TYPES.MARKDOWN.toLowerCase():
-            parseResult = await parseMarkdown(file);
-            break;
-        case SUPPORTED_FILE_TYPES.TEXT.toLowerCase():
-            const text = await file.text()
-            parseResult = await parseText(text)
-            break;
-        default:
-            throw AppError.badRequest("Unsupported file type");
+    try {
+        switch (documentType) {
+            case SUPPORTED_FILE_TYPES.PDF.toLowerCase():
+                parseResult = await parsePDF(file);
+                break;
+            case SUPPORTED_FILE_TYPES.MARKDOWN.toLowerCase():
+                parseResult = await parseMarkdown(file);
+                break;
+            case SUPPORTED_FILE_TYPES.TEXT.toLowerCase():
+                const text = await file.text()
+                parseResult = await parseText(text)
+                break;
+            default:
+                throw AppError.badRequest("Unsupported file type");
+        }
+    } catch (err) {
+        if (err instanceof AppError) throw err;
+        throw AppError.badRequest(`parse failed: ${(err as Error).message}`);
     }
     const embedder = new OpenAIEmbeddings({
         model: 'text-embedding-3-small',
@@ -101,7 +112,7 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
         //save document
         const document = await tx.document.create({
             data: {
-                documentTitle: documentTitle,
+                documentTitle: resolvedTitle,
                 source: "uploaded",
                 sourceType: documentType.toUpperCase() as SourceType,
                 userId: userId

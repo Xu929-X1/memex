@@ -64,11 +64,11 @@ export default function DashboardPage() {
     async function handleUpload(e: React.FormEvent) {
         e.preventDefault();
         const file = fileRef.current?.files?.[0];
-        if (!file || !title) return;
+        if (!file) return;
 
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("documentTitle", title);
+        if (title.trim()) formData.append("documentTitle", title.trim());
         formData.append("model", model);
 
         setUploading(true);
@@ -128,13 +128,14 @@ export default function DashboardPage() {
                     <CardContent>
                         <form onSubmit={handleUpload} className="flex flex-col gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="title">Document title</Label>
+                                <Label htmlFor="title">
+                                    Document title <span className="text-muted-foreground text-xs">(optional — defaults to filename)</span>
+                                </Label>
                                 <Input
                                     id="title"
                                     placeholder="My document"
                                     value={title}
                                     onChange={e => setTitle(e.target.value)}
-                                    required
                                     disabled={uploading}
                                 />
                             </div>

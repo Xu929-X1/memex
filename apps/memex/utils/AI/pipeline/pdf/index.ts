@@ -1,8 +1,3 @@
-import { spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import * as path from "node:path";
-
 export interface PdfPipelineSection {
     sectionContent: string;
     codeBlocks: string[] | null;
@@ -28,60 +23,48 @@ interface DoclingPayload {
     fidelity: PdfFidelityMetrics;
 }
 
-function resolveServiceDir(): string {
-    return path.resolve(process.cwd(), "services", "docling");
-}
+const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
-function resolvePythonBin(serviceDir: string): string {
-    const override = process.env.MEMEX_PYTHON_BIN;
-    if (override && override.trim().length > 0) return override;
-    if (process.platform === "win32") {
-        return path.join(serviceDir, ".venv", "Scripts", "python.exe");
+function resolveDoclingUrl(): string {
+    const url = process.env.DOCLING_URL?.trim();
+    if (!url) {
+        throw new Error("DOCLING_URL is not set. Point it at the docling service (e.g. http://docling.railway.internal:8000).");
     }
-    return path.join(serviceDir, ".venv", "bin", "python");
-}
-
-function runDocling(pythonBin: string, scriptPath: string, pdfPath: string, cwd: string): Promise<DoclingPayload> {
-    return new Promise((resolve, reject) => {
-        const child = spawn(pythonBin, [scriptPath, pdfPath], {
-            cwd,
-            env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
-            stdio: ["ignore", "pipe", "pipe"],
-        });
-        const stdoutChunks: Buffer[] = [];
-        const stderrChunks: Buffer[] = [];
-        child.stdout.on("data", c => stdoutChunks.push(c));
-        child.stderr.on("data", c => stderrChunks.push(c));
-        child.on("error", err => reject(err));
-        child.on("close", code => {
-            const stderr = Buffer.concat(stderrChunks).toString("utf8");
-            if (code !== 0) {
-                reject(new Error(`docling exited with code ${code}: ${stderr.trim()}`));
-                return;
-            }
-            const stdout = Buffer.concat(stdoutChunks).toString("utf8");
-            try {
-                const parsed = JSON.parse(stdout) as DoclingPayload;
-                resolve(parsed);
-            } catch (parseErr) {
-                reject(new Error(`failed to parse docling output: ${(parseErr as Error).message}\nstdout: ${stdout.slice(0, 500)}\nstderr: ${stderr.slice(0, 500)}`));
-            }
-        });
-    });
+    return url.replace(/\/+$/, "");
 }
 
 export async function runPdfPipeline(fileContent: ArrayBuffer): Promise<{ sections: PdfPipelineSection[]; fidelity: PdfFidelityMetrics }> {
-    const serviceDir = resolveServiceDir();
-    const pythonBin = resolvePythonBin(serviceDir);
-    const scriptPath = path.join(serviceDir, "process.py");
+    const base = resolveDoclingUrl();
+    const timeoutMs = Number(process.env.DOCLING_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
 
-    const workDir = await mkdtemp(path.join(tmpdir(), "memex-pdf-"));
-    const pdfPath = path.join(workDir, "input.pdf");
+    const form = new FormData();
+    form.append("file", new Blob([fileContent], { type: "application/pdf" }), "input.pdf");
+
+    const headers: Record<string, string> = {};
+    const secret = process.env.DOCLING_SHARED_SECRET?.trim();
+    if (secret) headers["X-Docling-Secret"] = secret;
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
-        await writeFile(pdfPath, Buffer.from(fileContent));
-        const payload = await runDocling(pythonBin, scriptPath, pdfPath, serviceDir);
+        const res = await fetch(`${base}/process`, {
+            method: "POST",
+            body: form,
+            headers,
+            signal: ctrl.signal,
+        });
+        if (!res.ok) {
+            const detail = await res.text().catch(() => "");
+            throw new Error(`docling service responded ${res.status}: ${detail.slice(0, 500)}`);
+        }
+        const payload = (await res.json()) as DoclingPayload;
         return { sections: payload.sections, fidelity: payload.fidelity };
+    } catch (err) {
+        if ((err as Error).name === "AbortError") {
+            throw new Error(`docling request timed out after ${timeoutMs}ms`);
+        }
+        throw err;
     } finally {
-        await rm(workDir, { recursive: true, force: true }).catch(() => undefined);
+        clearTimeout(timer);
     }
 }
