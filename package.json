@@ -17,6 +17,7 @@
     "mcp:local": "npm -w @memex/web run mcp",
     "migrate:dev": "npx -w @memex/web prisma migrate dev",
     "syncDb": "npx -w @memex/web prisma db pull",
-    "generate": "npx -w @memex/web prisma generate"
+    "generate": "npx -w @memex/web prisma generate",
+    "bootstrap:docling": "node -e \"const{spawnSync}=require('child_process');const p=process.platform==='win32'?['powershell','-ExecutionPolicy','Bypass','-File','apps/memex/services/docling/bootstrap.ps1']:['bash','apps/memex/services/docling/bootstrap.sh'];const r=spawnSync(p[0],p.slice(1),{stdio:'inherit'});process.exit(r.status||0);\""
   }
 }

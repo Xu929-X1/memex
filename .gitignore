@@ -64,3 +64,8 @@ next-env.d.ts
 
 # project-local
 CLAUDE.md
+
+# python
+**/.venv/
+**/__pycache__/
+*.pyc

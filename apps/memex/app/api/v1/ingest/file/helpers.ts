@@ -2,7 +2,7 @@ import { chunk } from "@/utils/AI/semanticChunk/chunk";
 import { AppError } from "@/utils/api/Errors";
 import { Root, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { runPdfPipeline } from "@/utils/AI/pipeline/pdf";
+import { runPdfPipeline, type PdfFidelityMetrics } from "@/utils/AI/pipeline/pdf";
 
 export type SectionKind = "TEXT" | "TABLE" | "FIGURE";
 
@@ -17,6 +17,7 @@ export interface FileParseSection {
 
 export interface FileParseResult {
     sections: FileParseSection[];
+    pdfFidelity?: PdfFidelityMetrics;
 }
 
 const MARKDOWN_SECTION_STRATEGIES = {
@@ -117,11 +118,11 @@ export async function parseText(text: string): Promise<FileParseResult> {
 }
 export async function parsePDF(file: File): Promise<FileParseResult> {
     const fileContent = await file.arrayBuffer();
-    const { sections } = await runPdfPipeline(fileContent);
+    const { sections, fidelity } = await runPdfPipeline(fileContent);
     const totalText = sections.reduce((n, s) => n + s.sectionContent.length, 0);
     if (totalText < 100) {
         throw AppError.badRequest("PDF appears to be image-based and cannot be parsed. Please use a text-based PDF.");
     }
-    return { sections };
+    return { sections, pdfFidelity: fidelity };
 }
 

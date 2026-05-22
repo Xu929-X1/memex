@@ -1,0 +1,3 @@
+docling processing failed: LocalEntryNotFoundError: Got: ConnectError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+An error happened while trying to locate the files on the Hub and we cannot find the appropriate snapshot folder for the specified revision on the local disk. Please check your internet connection and try again.
+The following objects are still open and will now be closed: [<PdfDocument 0x1dac4023a10 from <_io.BytesIO object at 0x000001DAC41913F0>>]
