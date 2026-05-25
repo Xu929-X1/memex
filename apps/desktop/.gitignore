@@ -1,4 +1,4 @@
-# Perry build outputs
+# Build outputs
 dist/
 *.o
 *.exe
@@ -6,12 +6,16 @@ dist/
 *.lib
 *.pdb
 
-# Generated type stubs (regenerate with `perry types`)
-.perry/types/
-.perry-cache
-
-# Node modules
+# Node
 node_modules/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# Bundled ONNX models (downloaded out-of-band; see src-tauri/resources/README.md)
+src-tauri/resources/*.onnx
+src-tauri/resources/tokenizers/
 
 # IDE
 .vscode/

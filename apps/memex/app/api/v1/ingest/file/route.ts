@@ -3,6 +3,7 @@ import type { InputJsonValue } from "@/prisma/schema/client/internal/prismaNames
 import { CUSTOM_USER_HEADER_KEY } from "@/proxy";
 import { LLM } from "@/utils/AI/model";
 import { analyzeChunks } from "@/utils/AI/QC/analyzer";
+import { embedSim, toVectorLiteral } from "@/utils/AI/embedder";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";
 import { prisma } from "@/utils/prisma/prisma";
@@ -105,9 +106,11 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
         model: 'text-embedding-3-small',
         apiKey: process.env.OPENAI_API_KEY
     })
-    const embeddings = await embedder.embedDocuments(
-        parseResult.sections.map(s => s.sectionContent)
-    )
+    const sectionTexts = parseResult.sections.map(s => s.sectionContent);
+    const [embeddings, simEmbeddings] = await Promise.all([
+        embedder.embedDocuments(sectionTexts),
+        embedSim(sectionTexts),
+    ]);
     return await prisma.$transaction(async (tx) => {
         //save document
         const document = await tx.document.create({
@@ -121,13 +124,14 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
 
         for (let i = 0; i < parseResult.sections.length; i++) {
             const item = parseResult.sections[i];
-            const vectorStr = `[${embeddings[i].join(",")}]`;
+            const vectorStr = toVectorLiteral(embeddings[i]);
+            const simVectorStr = toVectorLiteral(simEmbeddings[i]);
             const kind = item.kind ?? "TEXT";
             const pageStart = item.pageStart ?? null;
             const pageEnd = item.pageEnd ?? null;
 
-            await tx.$executeRaw`INSERT INTO "DocumentSection" ("documentId", "sectionContent", "chunkIndex", "sectionVector", "kind", "pageStart", "pageEnd")
-    VALUES (${document.id}, ${item.sectionContent}, ${item.chunkIndex}, ${vectorStr}::vector, ${kind}::"SectionKind", ${pageStart}, ${pageEnd})`
+            await tx.$executeRaw`INSERT INTO "DocumentSection" ("documentId", "sectionContent", "chunkIndex", "sectionVector", "simVector", "kind", "pageStart", "pageEnd")
+    VALUES (${document.id}, ${item.sectionContent}, ${item.chunkIndex}, ${vectorStr}::vector, ${simVectorStr}::vector, ${kind}::"SectionKind", ${pageStart}, ${pageEnd})`
         }
 
         const qcReport = analyzeChunks(parseResult.sections, embeddings);

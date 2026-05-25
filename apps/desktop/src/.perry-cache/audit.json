@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "modules": [
+    {
+      "source": "\\\\?\\C:\\Program Files\\Git\\dev\\prjs\\memex\\apps\\desktop\\src\\main.ts",
+      "package": null,
+      "stdlib": {
+        "perry/ui": [
+          "App",
+          "Button",
+          "State",
+          "VStack"
+        ]
+      }
+    }
+  ]
+}

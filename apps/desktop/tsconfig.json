@@ -1,14 +1,19 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "preserve",
+    "module": "ESNext",
     "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "paths": {
-      "perry/*": ["./.perry/types/perry/*/index.d.ts"]
-    }
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["vite/client"]
   },
-  "include": ["src", ".perry/types/stdlib/index.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src-tauri", "node_modules", "dist"]
 }
