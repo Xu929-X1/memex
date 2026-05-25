@@ -19,23 +19,43 @@ A personal knowledge engine. Ingest your documents, index them semantically, and
 | Layer | Technology |
 |---|---|
 | Framework | Next.js 16 (App Router) |
-| Database | PostgreSQL via Supabase + pgvector |
+| Database | PostgreSQL via Supabase + pgvector (HNSW) |
 | ORM | Prisma 7 with `@prisma/adapter-pg` |
 | LLM | OpenAI (GPT-4o) / Anthropic (Claude 3.5) via LangChain |
+| Embedders | OpenAI `text-embedding-3-small` (1536d, chat RAG) + local `bge-small-en-v1.5` (384d, similarity feature) via `@xenova/transformers` |
+| PDF parsing | [docling](https://github.com/DS4SD/docling) Python sidecar (FastAPI, containerized) |
 | Auth | JWT (jose) + httpOnly cookies |
 | UI | React 19, Tailwind CSS v4, shadcn/ui |
+| Desktop | Tauri (Rust) + Solid + Vite, local ONNX inference (in progress — see [`ROADMAP.md`](ROADMAP.md)) |
 
 ---
 
 ## Features
 
-- **Document ingestion** — upload PDF, Markdown, or plain text files; they are parsed, chunked, and embedded automatically
-- **Semantic search** — query your documents in natural language using pgvector similarity search
+- **Document ingestion** — upload PDF, Markdown, or plain text files; they are parsed, chunked, and dual-embedded automatically
+- **Semantic search** — query your documents in natural language using pgvector similarity search (HNSW-indexed)
 - **Multi-LLM** — choose between GPT-4o Mini, GPT-4o, Claude 3 Haiku, or Claude 3.5 Sonnet for ingestion
+- **PDF fidelity** — PDFs are parsed via the docling sidecar with layout/table/figure-aware chunking and retention metrics
 - **API key management** — programmatic access to your knowledge base
 - **MCP server** — Model Context Protocol support for tool-based integrations
+- **Desktop "looks like B"** *(in progress)* — system-wide similarity surfacing via a local Tauri client that mirrors your corpus on-device
 
 ---
+
+## Repo layout
+
+npm workspaces monorepo. Run commands from the repo root via workspace flags,
+or `cd` into the app directory.
+
+| Path | Workspace | What |
+|------|-----------|------|
+| `apps/memex/` | `@memex/web` | Next.js 16 App Router web app — auth, ingestion, retrieval, chat RAG. |
+| `apps/docling/` | — | Python FastAPI sidecar wrapping the docling PDF parser. Containerized. |
+| `apps/desktop/` | `@memex/desktop` | Tauri (Rust + Solid) shell for the similarity feature. Phase 1 scaffold — capture/UI deferred. |
+| `apps/extension/` | `@memex/extension` | WXT browser extension. Deprecated for the similarity feature. |
+| `packages/` | — | Reserved for shared packages. |
+
+See [`ROADMAP.md`](ROADMAP.md) for the desktop similarity-feature plan.
 
 ## Getting Started
 
@@ -45,6 +65,8 @@ A personal knowledge engine. Ingest your documents, index them semantically, and
 - A Supabase project with the `pgvector` extension enabled
 - OpenAI API key (required for embeddings)
 - Anthropic API key (optional, for Claude models)
+- Docker (only if running the docling sidecar locally for PDF ingest)
+- Rust ≥1.77 + tauri-cli (only for `apps/desktop` development)
 
 ### 1. Install dependencies
 
@@ -54,7 +76,7 @@ npm install
 
 ### 2. Configure environment
 
-Create `.env.local` in the project root:
+Create `apps/memex/.env.local`:
 
 ```env
 DATABASE_URL=postgresql://...      # Pooled connection string (pgbouncer)
@@ -62,25 +84,57 @@ DIRECT_URL=postgresql://...        # Direct connection string (for migrations)
 JWT_SECRET=<your-hs256-secret>
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...       # Optional
+
+DOCLING_URL=http://localhost:8000  # docling sidecar; on Railway use http://<svc>.railway.internal:<port>
+DOCLING_SHARED_SECRET=<shared>     # Must match the same env on the docling service
+
+HF_ENDPOINT=https://hf-mirror.com  # Optional. Use a mirror if huggingface.co is blocked.
 ```
 
 ### 3. Run migrations
 
 ```bash
+cd apps/memex
 npx prisma migrate dev
 ```
 
-### 4. Start the dev server
+### 4. Start the web dev server
+
+From the repo root:
 
 ```bash
-npm run dev
+npm run dev:web        # http://localhost:3000
 ```
+
+### 5. (Optional) Start the docling sidecar for PDF ingest
+
+```bash
+cd apps/docling
+docker build -f Dockerfile -t memex-docling ..
+docker run --rm -p 8000:8000 -e DOCLING_SHARED_SECRET=<shared> memex-docling
+```
+
+### 6. (Optional) Backfill `simVector` for legacy rows
+
+Required once after applying the `add_sim_vector` migration in an existing
+database, so the similarity feature sees a consistent corpus:
+
+```bash
+cd apps/memex
+npx tsx scripts/backfill-simvector.ts --dry-run    # count nulls
+npx tsx scripts/backfill-simvector.ts              # populate
+BATCH=200 npx tsx scripts/backfill-simvector.ts    # tune batch size
+```
+
+Idempotent and resumable.
 
 Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
 ## Project Structure
+
+All paths below are relative to `apps/memex/`.
 
 ```
 app/
@@ -89,21 +143,26 @@ app/
 ├── api/v1/
 │   ├── auth/login|register|logout  # Auth endpoints
 │   ├── documents/                  # List user documents
-│   ├── ingest/file/                # File upload & ingestion
+│   ├── ingest/file/                # File upload & ingestion (dual-embed)
 │   ├── retrieval/                  # Semantic search
 │   ├── vectorSearchOnly/           # Raw vector search
+│   ├── sections/sync/              # Desktop incremental sync (simVector only)
 │   └── apiKey/                     # API key management
 utils/
 ├── AI/
 │   ├── pipeline/ingest.ts          # LLM-based text parsing
-│   ├── pipeline/retrieval.ts       # Semantic retrieval
+│   ├── pipeline/retrieval.ts       # Semantic retrieval (RRF + Cohere rerank)
+│   ├── pipeline/pdf/index.ts       # docling sidecar client
 │   ├── semanticChunk/chunk.ts      # Embedding-based chunking
+│   ├── embedder.ts                 # Local bge-small-en-v1.5 (384d)
 │   └── model.ts                    # OpenAI / Anthropic factory
 ├── api/
 │   ├── withApiHandlers.ts          # Route wrapper (tracing, errors)
 │   ├── Errors.ts                   # AppError class
 │   └── response.ts                 # Typed response helpers
 └── prisma/prisma.ts                # Shared PrismaClient
+scripts/
+└── backfill-simvector.ts           # One-time + resumable simVector backfill
 mcp/index.ts                        # MCP server entry point
 ```
 
@@ -165,17 +224,24 @@ All protected routes require a valid `auth_token` cookie.
 ## Ingestion Pipeline
 
 ```
-PDF  ──► pdf-parse ──► parseText
-MD   ──► mdast AST ──► heading hierarchy extraction
-TXT  ──────────────► semantic chunking (3000 chars)
-                           │
-                     LLM structured output
-                     (sectionContent, chunkIndex)
-                           │
-                     OpenAI text-embedding-3-small (1536-dim)
-                           │
-                     pgvector INSERT
+PDF  ──► docling sidecar (HTTP) ──► layout-aware sections (TEXT/TABLE/FIGURE)
+MD   ──► mdast AST ──────────────► heading hierarchy extraction
+TXT  ──────────────────────────► semantic chunking (3000 chars)
+                                       │
+                                 LLM structured output
+                                 (sectionContent, chunkIndex)
+                                       │
+                                 ┌───────────────┐
+                                 │   parallel    │
+                                 ├───────────────┤
+                  OpenAI text-embedding-3-small (1536d) → sectionVector
+                  bge-small-en-v1.5             ( 384d) → simVector
+                                       │
+                                 pgvector INSERT (single transaction with QC run)
 ```
+
+Both vectors are HNSW-indexed. `sectionVector` drives chat RAG; `simVector`
+feeds the desktop similarity replica via `/api/v1/sections/sync`.
 
 ---
 
@@ -184,8 +250,12 @@ TXT  ──────────────► semantic chunking (3000 chars
 ```
 User
  ├── documents[]        Document
- │    └── sections[]   DocumentSection  (sectionVector: vector(1536))
- ├── thirdPartyAuths[]  ThirdPartyAuth   (GOOGLE | GITHUB)
+ │    ├── sections[]   DocumentSection
+ │    │                  sectionVector: vector(1536)   — OpenAI text-embedding-3-small, chat RAG
+ │    │                  simVector:     vector(384)?   — bge-small-en-v1.5, desktop similarity
+ │    │                  searchVector:  tsvector       — BM25
+ │    └── qualityRuns[] ChunkQualityRun                — per-ingest chunk QC metrics
+ ├── thirdPartyAuths[]  ThirdPartyAuth                  (GOOGLE | GITHUB)
  └── apikeys[]          APIKey
 ```
 
@@ -219,16 +289,26 @@ This means the indexed `sectionContent` may not faithfully represent the origina
 
 ## Roadmap
 
+See [`ROADMAP.md`](ROADMAP.md) for the in-flight "this looks like B" desktop
+similarity feature (dual-embedding + Tauri pivot).
+
 ### Retrieval & search
-- [ ] Complete the retrieval pipeline (`utils/AI/pipeline/retrieval.ts`) — hybrid search combining pgvector similarity with keyword matching
-- [ ] Re-ranking with Cohere (dependency already included)
+- [x] Hybrid retrieval (`utils/AI/pipeline/retrieval.ts`) — pgvector + BM25 fused via RRF, Cohere rerank
 - [ ] Source citations — surface the exact `DocumentSection` and chunk index that answered a query
 
 ### Ingestion
+- [x] PDF parsing via docling sidecar (layout/table/figure-aware, fidelity metrics)
+- [x] Dual embedding (OpenAI 1536d + bge 384d) at ingest
 - [ ] Web URL ingestion (`app/api/v1/ingest/url/`) — crawl and index web pages
 - [ ] Notion integration — pull pages via Notion API using OAuth
 - [ ] Replace LLM-rewriting with extraction-only for plain text to eliminate summarization drift
 - [ ] Improve chunker with a hybrid strategy (cosine + token budget hard cap)
+
+### Desktop similarity ("this looks like B")
+- [x] Cloud foundation — `simVector` column, HNSW indexes, dual-embed ingest, backfill script, `/api/v1/sections/sync` endpoint
+- [x] Desktop Tauri scaffold — Rust backend (embedder/reranker/store/sync) + Solid frontend
+- [ ] Phase 2 — OS-level capture (Windows UIA / macOS Accessibility, debounced focus loop, privacy controls)
+- [ ] Phase 3 — Similarity panel UI (layered doc-level + section-level, threshold gating)
 
 ### Settings & configuration UI
 - [ ] **Secrets manager** — in-app interface to configure `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and other environment variables without touching `.env.local` directly
@@ -244,15 +324,42 @@ This means the indexed `sectionContent` may not faithfully represent the origina
 ### Infrastructure
 - [ ] Rate limiting on ingestion endpoints
 - [ ] Background job queue for large file ingestion (avoid request timeouts on large PDFs)
+- [ ] HNSW index on `sectionVector` for chat-RAG kNN (added alongside `simVector` index in the `add_sim_vector` migration)
 
 ---
 
 ## Development
 
+From the repo root:
+
 ```bash
-npm run dev          # Start dev server
-npm run build        # Production build (runs prisma generate first)
-npm run lint         # ESLint
-npx prisma generate  # Regenerate Prisma client after schema changes
-npx prisma db push   # Push schema without migration history
+npm run dev:web        # @memex/web — Next dev (http://localhost:3000)
+npm run dev:ext        # @memex/extension — WXT dev (loads unpacked into Chrome)
+npm run build:web      # Next production build (runs prisma generate first)
+npm run build:ext      # WXT production build
+npm run lint           # ESLint across workspaces (--if-present)
+```
+
+Or per workspace:
+
+```bash
+npm -w @memex/web run dev
+npm -w @memex/extension run dev
+```
+
+### Prisma (run from `apps/memex/`)
+
+```bash
+npx prisma generate    # Regenerate Prisma client after schema changes
+npx prisma migrate dev # Apply migrations
+npx prisma db push     # Push schema without migration history
+```
+
+### Desktop (Tauri — `apps/desktop/`)
+
+```bash
+cd apps/desktop
+npm install
+# Download ONNX models per src-tauri/resources/README.md (bge-small-en-v1.5 + bge-reranker-base)
+npm run tauri:dev      # requires Rust >= 1.77 + tauri-cli
 ```
