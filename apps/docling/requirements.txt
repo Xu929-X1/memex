@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.4.1+cpu
 torchvision==0.19.1+cpu
-docling==2.40.0
+docling>=2.43,<3
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 python-multipart==0.0.18

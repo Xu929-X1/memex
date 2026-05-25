@@ -1,0 +1,19 @@
+{
+  "name": "@memex/desktop",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "build": "npx perry ./src/main.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@perryts/perry": "^0.5.1025"
+  },
+  "perry": {
+    "compilePackages": []
+  }
+}

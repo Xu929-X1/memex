@@ -85,7 +85,7 @@ export const POST = withApiHandler(async (req: NextRequest, _, traceId) => {
     try {
         switch (documentType) {
             case SUPPORTED_FILE_TYPES.PDF.toLowerCase():
-                parseResult = await parsePDF(file);
+                parseResult = await parsePDF(file, traceId);
                 break;
             case SUPPORTED_FILE_TYPES.MARKDOWN.toLowerCase():
                 parseResult = await parseMarkdown(file);

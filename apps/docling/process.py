@@ -6,9 +6,13 @@ the legacy Node spawn contract so the web client deserializer is unchanged.
 
 from __future__ import annotations
 
+import logging
 import os
+import time
 from pathlib import Path
 from typing import Any
+
+log = logging.getLogger("docling.pipeline")
 
 
 def _envFlag(name: str, default: bool) -> bool:
@@ -173,18 +177,30 @@ def _get_converter():
     layout_name = _envStr("DOCLING_LAYOUT_MODEL", "egret_medium")
     layout_spec = _resolve_layout_spec(layout_name)
     num_threads = _envInt("DOCLING_NUM_THREADS", 2)
+    do_ocr = _envFlag("DOCLING_DO_OCR", False)
+    do_table_structure = _envFlag("DOCLING_DO_TABLE_STRUCTURE", True)
+
+    log.info(
+        "converter init layout=%s threads=%d ocr=%s table_structure=%s",
+        layout_name,
+        num_threads,
+        do_ocr,
+        do_table_structure,
+    )
 
     pipeline_options = PdfPipelineOptions()
-    pipeline_options.do_ocr = _envFlag("DOCLING_DO_OCR", False)
-    pipeline_options.do_table_structure = _envFlag("DOCLING_DO_TABLE_STRUCTURE", True)
+    pipeline_options.do_ocr = do_ocr
+    pipeline_options.do_table_structure = do_table_structure
     pipeline_options.layout_options = LayoutOptions(model_spec=layout_spec)
     pipeline_options.accelerator_options = AcceleratorOptions(num_threads=num_threads)
 
+    t0 = time.perf_counter()
     _converter = DocumentConverter(
         format_options={
             InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
         },
     )
+    log.info("converter built in %.2fs", time.perf_counter() - t0)
     return _converter
 
 
@@ -192,15 +208,31 @@ def process(pdf_path: Path) -> dict:
     from docling.chunking import HybridChunker
 
     converter = _get_converter()
+
+    t_conv = time.perf_counter()
     result = converter.convert(str(pdf_path))
     doc = result.document
+    log.info(
+        "convert ok path=%s pages=%s elapsed_ms=%.0f",
+        pdf_path.name,
+        getattr(getattr(doc, "num_pages", None), "__call__", lambda: None)() if callable(getattr(doc, "num_pages", None)) else getattr(doc, "num_pages", None),
+        (time.perf_counter() - t_conv) * 1000,
+    )
 
     extracted_text = doc.export_to_markdown()
     extracted_chars = len(extracted_text)
 
     max_tokens = _envInt("DOCLING_CHUNK_MAX_TOKENS", 512)
     chunker = HybridChunker(max_tokens=max_tokens, merge_peers=True)
+    t_chunk = time.perf_counter()
     chunks = list(chunker.chunk(dl_doc=doc))
+    log.info(
+        "chunking ok max_tokens=%d chunks=%d extracted_chars=%d elapsed_ms=%.0f",
+        max_tokens,
+        len(chunks),
+        extracted_chars,
+        (time.perf_counter() - t_chunk) * 1000,
+    )
 
     raw_sections: list[dict] = []
     final_chars = 0
@@ -224,6 +256,7 @@ def process(pdf_path: Path) -> dict:
         final_chars += len(text)
 
     pictures = getattr(doc, "pictures", None) or []
+    log.info("picture extraction count=%d", len(pictures))
     for pic in pictures:
         caption = _picture_caption(pic, doc)
         page, top_y = _picture_position(pic)
