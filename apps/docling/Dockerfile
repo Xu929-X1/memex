@@ -17,6 +17,9 @@ WORKDIR /app
 COPY apps/docling/requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
 
+# Fail build loudly if chunking extra missing (HybridChunker requires it)
+RUN python -c "from docling.chunking import HybridChunker; print('chunking extra OK')"
+
 # Pre-download docling weights into the image so first request is fast
 RUN python -c "from docling.utils.model_downloader import download_models; download_models(output_dir='/opt/models')" || \
     python -c "from docling.document_converter import DocumentConverter; DocumentConverter()" || true
