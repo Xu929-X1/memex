@@ -116,9 +116,9 @@ export async function parseText(text: string): Promise<FileParseResult> {
 
     return { sections: sections };
 }
-export async function parsePDF(file: File): Promise<FileParseResult> {
+export async function parsePDF(file: File, traceId?: string): Promise<FileParseResult> {
     const fileContent = await file.arrayBuffer();
-    const { sections, fidelity } = await runPdfPipeline(fileContent);
+    const { sections, fidelity } = await runPdfPipeline(fileContent, traceId);
     const totalText = sections.reduce((n, s) => n + s.sectionContent.length, 0);
     if (totalText < 100) {
         throw AppError.badRequest("PDF appears to be image-based and cannot be parsed. Please use a text-based PDF.");

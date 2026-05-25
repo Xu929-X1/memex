@@ -1,0 +1,18 @@
+# Perry build outputs
+dist/
+*.o
+*.exe
+*.exp
+*.lib
+*.pdb
+
+# Generated type stubs (regenerate with `perry types`)
+.perry/types/
+.perry-cache
+
+# Node modules
+node_modules/
+
+# IDE
+.vscode/
+.idea/
