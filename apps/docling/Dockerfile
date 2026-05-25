@@ -21,7 +21,7 @@ RUN python -c "from docling.chunking import HybridChunker; print('chunking extra
 
 # Pre-download docling weights into HF cache so first request is fast.
 # No `|| true` — fail loud if downloader API changed.
-RUN python -c "from docling.utils.model_downloader import download_models; download_models(output_dir='/opt/models')"
+RUN python -c "from pathlib import Path; from docling.utils.model_downloader import download_models; download_models(output_dir=Path('/opt/models'))"
 
 COPY apps/docling/process.py /app/process.py
 COPY apps/docling/main.py /app/main.py
