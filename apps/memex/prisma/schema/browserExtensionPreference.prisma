@@ -1,7 +1,7 @@
 model BrowserExtensionPreference {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  trackAllActivities  Boolean  @default(false)
-  trackURLs           String[]
-  user                User     @relation(fields: [userId], references: [id])
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  trackAllActivities Boolean  @default(false)
+  trackURLs          String[]
+  user               User     @relation(fields: [userId], references: [id])
 }
