@@ -13,10 +13,6 @@ node_modules/
 src-tauri/target/
 src-tauri/Cargo.lock
 
-# Bundled ONNX models (downloaded out-of-band; see src-tauri/resources/README.md)
-src-tauri/resources/*.onnx
-src-tauri/resources/tokenizers/
-
 # IDE
 .vscode/
 .idea/
