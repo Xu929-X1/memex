@@ -19,6 +19,10 @@
     "syncDb": "npx -w @memex/web prisma db pull",
     "generate": "npx -w @memex/web prisma generate",
     "dev:docling": "cd apps/docling && uvicorn main:app --host 0.0.0.0 --port 8000 --reload",
-    "build:desktop": "npx -w @memex/desktop perry ./src/main.ts"
+    "dev:desktop": "npm -w @memex/desktop run dev",
+    "build:desktop": "npm -w @memex/desktop run build",
+    "tauri": "npm -w @memex/desktop run tauri",
+    "tauri:dev": "npm -w @memex/desktop run tauri:dev",
+    "tauri:build": "npm -w @memex/desktop run tauri:build"
   }
 }
