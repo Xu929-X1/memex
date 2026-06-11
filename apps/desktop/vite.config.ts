@@ -1,4 +1,3 @@
-import tailwindcss from '@tailwindcss/vite';
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
@@ -8,10 +7,11 @@ const host = process.env.TAURI_DEV_HOST;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  plugins: [solid(), tailwindcss()],
+  plugins: [solid()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      "styled-system": path.resolve(__dirname, "styled-system"),
     },
   },
   // prevent vite from obscuring rust errors
@@ -44,5 +44,13 @@ export default defineConfig({
     minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
     // produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    rollupOptions: {
+      // Panda's generated jsx places /* @__PURE__ */ where Rolldown can't read it.
+      // Harmless dead-code-elimination hint — silence the noise.
+      onwarn(warning, warn) {
+        if (warning.code === 'INVALID_ANNOTATION') return;
+        warn(warning);
+      },
+    },
   },
 });
