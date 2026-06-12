@@ -1,14 +1,18 @@
+// Native HTTP — runs in Rust, bypasses webview CORS/preflight.
+import { fetch } from "@tauri-apps/plugin-http";
+import { CLIENT_HEADER, CLIENTS } from "@memex/shared";
+
 // Talks to the @memex/web API. Override in dev via VITE_API_BASE.
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+const API_BASE = (
+    import.meta.env.VITE_API_BASE ?? "https://memex.up.railway.app"
+).replace(/\/+$/, "");
 
 async function post<T>(path: string, body: unknown): Promise<T> {
     const res = await fetch(`${API_BASE}/api/v1/${path}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            // signals the web API to also return the JWT in the body
-            // (cookie auth is unreachable from the Tauri webview)
-            "X-Client": "desktop",
+            [CLIENT_HEADER]: CLIENTS.desktop,
         },
         body: JSON.stringify(body),
     });
@@ -24,7 +28,6 @@ export type AuthUser = {
     id: string;
     email: string;
     username?: string;
-    // present only once the web API returns the token in-body for desktop
     token?: string;
 };
 

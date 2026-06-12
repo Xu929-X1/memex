@@ -3,6 +3,7 @@ import { generateToken } from "@/utils/api/auth/token";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";
 import { prisma } from "@/utils/prisma/prisma";
+import { CLIENT_HEADER, CLIENTS, parseClient } from "@memex/shared";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import * as z from "zod";
@@ -37,7 +38,10 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     const { password, ...safeUser } = createdUser
     const token = await generateToken(createdUser.id)
 
-    const response = NextResponse.json(safeUser, { status: 201 })
+    const client = parseClient(request.headers.get(CLIENT_HEADER));
+    // Desktop can't read the httpOnly cookie from its webview — hand it the token.
+    const body = client === CLIENTS.desktop ? { ...safeUser, token } : safeUser;
+    const response = NextResponse.json(body, { status: 201 })
     response.cookies.set(AUTH_TOKEN_KEY, token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

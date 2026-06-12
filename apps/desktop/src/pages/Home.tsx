@@ -78,9 +78,9 @@ export default function Home() {
             </div>
 
             <h1 class={hero}>
-                Your browser remembers URLs.{" "}
+                Your computer stores files.{" "}
                 <span class={css({ color: "fg.muted" })}>
-                    Memex remembers what you actually read.
+                    Memex stores knowledge.
                 </span>
             </h1>
 

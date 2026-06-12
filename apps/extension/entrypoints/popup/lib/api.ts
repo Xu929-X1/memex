@@ -1,9 +1,14 @@
 import { browser } from 'wxt/browser';
+import { CLIENT_HEADER, CLIENTS } from '@memex/shared';
 
 export const API = import.meta.env.WXT_API_URL;
 
 export async function authedFetch(path: string, init: RequestInit = {}) {
-  const r = await fetch(`${API}${path}`, { ...init, credentials: 'include' });
+  const r = await fetch(`${API}${path}`, {
+    ...init,
+    credentials: 'include',
+    headers: { [CLIENT_HEADER]: CLIENTS.extension, ...init.headers },
+  });
   if (!r.ok) {
     const body = await r.json().catch(() => null);
     throw new Error(body?.error?.message ?? `Request failed: ${r.status}`);

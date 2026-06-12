@@ -3,6 +3,7 @@ import { generateToken } from "@/utils/api/auth/token";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";
 import { prisma } from "@/utils/prisma/prisma";
+import { CLIENT_HEADER, CLIENTS, parseClient } from "@memex/shared";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
@@ -15,6 +16,7 @@ const loginSchema = z.object({
 export const POST = withApiHandler(async (request: NextRequest) => {
     const payload = await request.json();
     const validatedPayload = await loginSchema.safeParse(payload);
+    const client = parseClient(request.headers.get(CLIENT_HEADER));
     if (validatedPayload.error) {
         throw AppError.unauthorized("Invalid Credentials")
     }
@@ -50,6 +52,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
         maxAge: 60 * 60 * 24 * 7
     });
     const { password, ...safeUser } = user;
-    return safeUser;
+    // Desktop can't read the httpOnly cookie from its webview — hand it the token.
+    return client === CLIENTS.desktop ? { ...safeUser, token } : safeUser;
 
 })

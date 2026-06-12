@@ -22,6 +22,7 @@ pub fn run() {
             commands::my_custom_command::my_custom_command
         ])
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             // System tray: keeps the app reachable while it runs in the background.
