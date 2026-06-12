@@ -1,44 +1,60 @@
-import { cn } from "@/lib/utils";
-import { cva, type VariantProps } from "class-variance-authority";
-import { splitProps, type JSX } from "solid-js";
+import { cva } from "styled-system/css";
+import { styled } from "styled-system/jsx";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
-  {
+const button = cva({
+    base: {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "2",
+        whiteSpace: "nowrap",
+        borderRadius: "l2",
+        fontWeight: "medium",
+        cursor: "pointer",
+        transition:
+            "background 0.18s, color 0.18s, border-color 0.18s, opacity 0.18s",
+        outline: "none",
+        _focusVisible: {
+            outlineWidth: "2px",
+            outlineStyle: "solid",
+            outlineColor: "amber.default",
+            outlineOffset: "2px",
+        },
+        _disabled: { opacity: 0.5, pointerEvents: "none" },
+    },
     variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-6",
-        icon: "h-9 w-9",
-      },
+        variant: {
+            // high-contrast neutral primary — quiet, fits the warm theme
+            solid: {
+                bg: "fg.default",
+                color: "bg.canvas",
+                _hover: { opacity: 0.9 },
+            },
+            outline: {
+                borderWidth: "1px",
+                borderColor: "border.default",
+                color: "fg.default",
+                _hover: { bg: "gray.a2", borderColor: "border.emphasized" },
+            },
+            ghost: {
+                color: "fg.default",
+                _hover: { bg: "gray.a2" },
+            },
+            // amber accent — reserve for a single emphasized action
+            accent: {
+                colorPalette: "accent",
+                bg: "colorPalette.default",
+                color: "colorPalette.fg",
+                _hover: { bg: "colorPalette.emphasized" },
+            },
+        },
+        size: {
+            sm: { h: "9", px: "3.5", fontSize: "sm" },
+            md: { h: "10", px: "4", fontSize: "sm" },
+            lg: { h: "11", px: "5", fontSize: "md" },
+        },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
+    defaultVariants: { variant: "solid", size: "md" },
+});
 
-export type ButtonProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants>;
-
-export function Button(props: ButtonProps) {
-  const [local, rest] = splitProps(props, ["class", "variant", "size"]);
-  return (
-    <button
-      class={cn(buttonVariants({ variant: local.variant, size: local.size }), local.class)}
-      {...rest}
-    />
-  );
-}
-
-export { buttonVariants };
+export const Button = styled("button", button);

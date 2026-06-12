@@ -20,12 +20,15 @@
       "vite/client"
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "styled-system/*": ["./styled-system/*"]
     }
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
+    "styled-system/**/*.ts",
+    "styled-system/**/*.tsx",
   ],
   "exclude": [
     "src-tauri",
