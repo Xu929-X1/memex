@@ -1,6 +1,5 @@
-// Native HTTP — runs in Rust, bypasses webview CORS/preflight.
-import { fetch } from "@tauri-apps/plugin-http";
 import { CLIENT_HEADER, CLIENTS } from "@memex/shared";
+import { fetch } from "@tauri-apps/plugin-http";
 
 // Talks to the @memex/web API. Override in dev via VITE_API_BASE.
 const API_BASE = (

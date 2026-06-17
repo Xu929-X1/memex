@@ -9,7 +9,6 @@ import { NextRequest } from "next/server";
 export const POST = withApiHandler(async (request: NextRequest) => {
     const client = parseClient(request.headers.get(CLIENT_HEADER));
     if (client !== CLIENTS.desktop) throw AppError.forbidden("Desktop client only");
-    if (request.headers.get("origin")) throw AppError.forbidden("Desktop client only");
 
     const { user, token } = await createAccount(await request.json());
     return { ...user, token };
