@@ -28,7 +28,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "styled-system/**/*.ts",
-    "styled-system/**/*.tsx",
+    "styled-system/**/*.tsx", "../memex/interceptors.ts",
   ],
   "exclude": [
     "src-tauri",
