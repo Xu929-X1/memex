@@ -32,11 +32,11 @@ export type AuthUser = {
 };
 
 export function login(identifier: string, password: string) {
-    return post<AuthUser>("auth/login", { identifier, password });
+    return post<AuthUser>("auth/desktop/login", { identifier, password });
 }
 
 export function register(email: string, username: string, password: string) {
-    return post<AuthUser>("auth/register", { email, username, password });
+    return post<AuthUser>("auth/desktop/register", { email, username, password });
 }
 
 // TODO(auth): persist `user.token` in the OS keychain via a Tauri command
