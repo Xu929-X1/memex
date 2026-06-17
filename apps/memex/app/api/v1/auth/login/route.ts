@@ -1,58 +1,22 @@
-import { AUTH_TOKEN_KEY } from "@/proxy";
-import { generateToken } from "@/utils/api/auth/token";
+import { authCookieOptions, authenticate, AUTH_TOKEN_KEY } from "@/utils/api/auth/credentials";
 import { AppError } from "@/utils/api/Errors";
 import { withApiHandler } from "@/utils/api/withApiHandlers";
-import { prisma } from "@/utils/prisma/prisma";
 import { CLIENT_HEADER, CLIENTS, parseClient } from "@memex/shared";
-import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
-import * as z from "zod";
-const loginSchema = z.object({
-    password: z.string(),
-    identifier: z.string()
-});
 
+// Cookie-based login for browser clients (web, extension). The token is set as
+// an httpOnly cookie and NEVER returned in the body — so it can't be read by
+// JS/XSS. Native clients use /auth/desktop/login instead.
 export const POST = withApiHandler(async (request: NextRequest) => {
-    const payload = await request.json();
-    const validatedPayload = await loginSchema.safeParse(payload);
     const client = parseClient(request.headers.get(CLIENT_HEADER));
-    if (validatedPayload.error) {
-        throw AppError.unauthorized("Invalid Credentials")
+    if (client === null) throw AppError.badRequest("Unsupported Client Type");
+    if (client === CLIENTS.desktop) {
+        throw AppError.badRequest("Desktop must use /auth/desktop/login");
     }
 
-    const user = await prisma.user.findFirst({
-        where: {
-            OR: [
-                { email: validatedPayload.data.identifier },
-                { username: validatedPayload.data.identifier }
-            ]
-        }
-    })
+    const { user, token } = await authenticate(await request.json());
 
-    if (!user) throw AppError.unauthorized("Invalid Credentials")
-
-
-    if (!validatedPayload.data.password) {
-        throw AppError.unauthorized("Invalid Credentials");
-    }
-    const isValid = await bcrypt.compare(validatedPayload.data.password, user.password);
-    if (!isValid) {
-        throw AppError.unauthorized('Invalid Credentials');
-    }
-
-    const token = await generateToken(user.id);
-
-    (await cookies()).set({
-        name: AUTH_TOKEN_KEY,
-        value: token,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7
-    });
-    const { password, ...safeUser } = user;
-    // Desktop can't read the httpOnly cookie from its webview — hand it the token.
-    return client === CLIENTS.desktop ? { ...safeUser, token } : safeUser;
-
-})
+    (await cookies()).set({ name: AUTH_TOKEN_KEY, value: token, ...authCookieOptions });
+    return user;
+});

@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { login } from "@/lib/api";
 import { A, useNavigate } from "@solidjs/router";
+import { invoke } from '@tauri-apps/api/core';
 import { createSignal, Show } from "solid-js";
 import { css } from "styled-system/css";
+
 
 export default function Login() {
     const navigate = useNavigate();
@@ -18,8 +20,12 @@ export default function Login() {
         setError("");
         setLoading(true);
         try {
-            await login(identifier(), password());
+            const res = await login(identifier(), password());
+            console.log(res);
             // TODO(auth): persist token in keychain, then route to the app
+            await invoke("save_auth", {
+
+            })
             navigate("/");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Sign in failed");
