@@ -18,7 +18,8 @@
         "height": 720,
         "resizable": true,
         "decorations": true,
-        "alwaysOnTop": false
+        "alwaysOnTop": false,
+        "visible": false
       }
     ],
     "security": {

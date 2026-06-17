@@ -1,2 +1,6 @@
-//shared state for the app, now I am thinking DB handle, embedder, local llm, queue, etc.
-pub struct app_state {}
+use crate::db::Db;
+
+// Shared app state. Grows to hold embedder, local llm, queue, etc.
+pub struct AppState {
+    pub db: Db,
+}
