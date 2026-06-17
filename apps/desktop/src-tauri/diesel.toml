@@ -1,0 +1,6 @@
+# Diesel CLI config. Regenerate schema with: diesel migration run / diesel print-schema
+[print_schema]
+file = "src/db/schema.rs"
+
+[migrations_directory]
+dir = "migrations"
