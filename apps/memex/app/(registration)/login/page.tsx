@@ -5,7 +5,6 @@ import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorBody } from "@/utils/api/response";
-import { CLIENT_HEADER, CLIENTS } from "@memex/shared";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useActionState } from "react";
@@ -29,9 +28,7 @@ export default function Page() {
             }
         }
         try {
-            const response = await axios.post(routeHelper.login.post, payload, {
-                headers: { [CLIENT_HEADER]: CLIENTS.web },
-            });
+            await axios.post(routeHelper.login.post, payload);
             router.push("/dashboard");
         } catch (error) {
             if (axios.isAxiosError(error)) {

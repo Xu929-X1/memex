@@ -22,8 +22,8 @@ export default function Signup() {
             await register(email(), username(), password());
             // TODO(auth): persist token in keychain, then continue onboarding
             navigate("/setup");
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Sign up failed");
+        } catch (err: any) {
+            setError(`${err.message}: ${err.description}`);
         } finally {
             setLoading(false);
         }
