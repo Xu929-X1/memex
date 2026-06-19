@@ -22,6 +22,15 @@ export async function decodeToken(token: string) {
     }
     const secret = new TextEncoder().encode(process.env.JWT_SECRET)
     const { payload } = await jose.jwtVerify(token, secret)
-
     return payload;
+}
+
+export async function checkExpiration(token: string): Promise<boolean>{
+    if(!process.env.JWT_SECRET){
+        throw AppError.internal("No JWT Secret found")
+    }
+
+    const payload = await decodeToken(token.split(" ")[1]);
+    const now =  Date.now()/1000;
+    return now < (payload.exp ?? 0);
 }

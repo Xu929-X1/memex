@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { isAuthed, ready } from "@/lib/auth";
 import { useNavigate } from "@solidjs/router";
-import { For } from "solid-js";
+import { createEffect, For } from "solid-js";
 import { css } from "styled-system/css";
 
 const page = css({
@@ -71,6 +72,11 @@ const STATS = [
 
 export default function Home() {
     const navigate = useNavigate();
+    // Auto sign-in: once the startup token check finishes, send authed users
+    // straight to the app instead of showing the marketing landing.
+    createEffect(() => {
+        if (ready() && isAuthed()) navigate("/dashboard", { replace: true });
+    });
     return (
         <main class={page}>
             <div class={brand}>

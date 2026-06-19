@@ -23,7 +23,6 @@ fn show_main_window(app: &tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            commands::my_custom_command::my_custom_command,
             commands::auth_commands::save_auth,
             commands::auth_commands::get_token,
             commands::auth_commands::delete_token,

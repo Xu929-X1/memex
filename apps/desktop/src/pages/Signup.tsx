@@ -2,6 +2,7 @@ import { AuthLayout, authLink } from "@/components/auth-layout";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { register } from "@/lib/api";
+import { signIn } from "@/lib/auth";
 import { A, useNavigate } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import { css } from "styled-system/css";
@@ -19,8 +20,10 @@ export default function Signup() {
         setError("");
         setLoading(true);
         try {
-            await register(email(), username(), password());
-            // TODO(auth): persist token in keychain, then continue onboarding
+            const res = await register(email(), username(), password());
+            if (!res.data.token) throw new Error("No token returned");
+            await signIn(res.data.token, res.data);
+            // New user → onboarding.
             navigate("/setup");
         } catch (err: any) {
             setError(`${err.message}: ${err.description}`);

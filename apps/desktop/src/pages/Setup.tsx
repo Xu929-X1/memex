@@ -132,7 +132,9 @@ export default function Setup() {
                         onInput={(e) => setDataDir(e.currentTarget.value)}
                     />
                     <div class={row}>
-                        <Button variant="outline" size="md">
+                        <Button variant="outline" size="md" onClick={() => {
+                            //Open
+                        }}>
                             Browse…
                         </Button>
                     </div>
