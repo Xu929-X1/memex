@@ -5,7 +5,8 @@
 
 /** HTTP header that identifies which client made a request. */
 export const CLIENT_HEADER = "X-Client" as const;
-
+export const BEARER_HEADER = "Authorization" as const;
+export const BEARER_PREFIX = "Bearer "
 /** Known client identifiers sent in {@link CLIENT_HEADER}. */
 export const CLIENTS = {
     web: "web",

@@ -2,14 +2,6 @@
 // Regenerate after a new migration: `diesel migration run` (updates this file).
 
 diesel::table! {
-    session (id) {
-        id -> Integer,
-        token -> Text,
-        saved_at -> BigInt,
-    }
-}
-
-diesel::table! {
     settings (key) {
         key -> Text,
         value -> Text,
@@ -24,4 +16,4 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(session, settings, user_info);
+diesel::allow_tables_to_appear_in_same_query!(settings, user_info);
