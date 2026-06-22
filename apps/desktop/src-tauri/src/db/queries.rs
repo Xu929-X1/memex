@@ -1,36 +1,7 @@
 use super::models::UserInfo;
-use super::schema::{session, settings, user_info};
+use super::schema::{settings, user_info};
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
-
-// ---- session (single row, id = 1) ----
-
-pub fn save_session(conn: &mut SqliteConnection, token: &str, saved_at: i64) -> QueryResult<()> {
-    diesel::insert_into(session::table)
-        .values((
-            session::id.eq(1),
-            session::token.eq(token),
-            session::saved_at.eq(saved_at),
-        ))
-        .on_conflict(session::id)
-        .do_update()
-        .set((session::token.eq(token), session::saved_at.eq(saved_at)))
-        .execute(conn)?;
-    Ok(())
-}
-
-pub fn get_token(conn: &mut SqliteConnection) -> QueryResult<Option<String>> {
-    session::table
-        .find(1)
-        .select(session::token)
-        .first::<String>(conn)
-        .optional()
-}
-
-pub fn clear_session(conn: &mut SqliteConnection) -> QueryResult<()> {
-    diesel::delete(session::table).execute(conn)?;
-    Ok(())
-}
 
 // ---- user_info ----
 
