@@ -50,6 +50,10 @@ pub fn run() {
             std::fs::create_dir_all(path.parent().unwrap())?;
             let db = db::Db::open(&path).map_err(|e| e.to_string())?;
             app.manage(AppState { db });
+
+            // Watch for global text selections and drive the HUD.
+            uia::selection_watcher::spawn(app.handle().clone());
+
             let window = app.get_webview_window("main").unwrap();
 
             // First run only: no saved state yet, so seed a default position.

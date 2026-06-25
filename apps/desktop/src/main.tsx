@@ -4,6 +4,7 @@ import App from "./App";
 import { Protected } from "./components/protected";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
+import Hud from "./pages/Hud";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
 import Setup from "./pages/Setup";
@@ -16,6 +17,7 @@ render(
     () => (
         <HashRouter root={App}>
             <Route path="/" component={Home} />
+            <Route path="/hud" component={Hud} />
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
             <Route path="/setup" component={() => <Protected><Setup /></Protected>} />

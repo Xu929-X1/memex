@@ -20,6 +20,20 @@
         "decorations": true,
         "alwaysOnTop": false,
         "visible": false
+      },
+      {
+        "label": "hud",
+        "url": "index.html#/hud",
+        "width": 300,
+        "height": 200,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "shadow": false,
+        "resizable": false,
+        "visible": false
       }
     ],
     "security": {

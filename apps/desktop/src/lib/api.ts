@@ -59,5 +59,16 @@ export function tokenHealthCheck(token: string){
     return post("auth/desktop/me", {}, token);
 }
 
-// TODO(auth): persist `user.token` in the OS keychain via a Tauri command
-// (invoke("save_token", { token })) and send it as `Authorization: Bearer`.
+// Mirrors the web API's RetrievalResult.
+export type RelatedMemory = {
+    sectionId: string;
+    documentId: string;
+    documentTitle: string;
+    sectionContent: string;
+    similarity: number;
+};
+
+// Hybrid (BM25 + vector) recall over the user's captured sections.
+export function searchMemory(query: string, token: string) {
+    return post<RelatedMemory[]>("retrieval", { query }, token);
+}

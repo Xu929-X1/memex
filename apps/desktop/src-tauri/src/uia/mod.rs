@@ -2,6 +2,7 @@ use uiautomation::Result;
 use uiautomation::UIElement;
 use uiautomation::UITreeWalker;
 
+pub mod selection_watcher;
 pub mod traverse_all_elements;
 pub mod traverse_focused_windows;
 

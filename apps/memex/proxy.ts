@@ -1,4 +1,4 @@
-import { CLIENT_HEADER, CLIENTS, parseClient } from '@memex/shared';
+import { BEARER_HEADER, BEARER_PREFIX, CLIENT_HEADER, CLIENTS, parseClient } from '@memex/shared';
 import * as jose from 'jose';
 import { NextRequest, NextResponse } from "next/server";
 import { AppError } from './utils/api/Errors';
@@ -14,7 +14,10 @@ export async function proxy(request: NextRequest) {
     }
 
         const pathname = request.url;
-        const token = client === CLIENTS.web?  request.cookies.get(AUTH_TOKEN_KEY)?.value: request.headers.get(AUTH_TOKEN_KEY);
+   
+        const token = client === CLIENTS.web
+            ? request.cookies.get(AUTH_TOKEN_KEY)?.value
+            : request.headers.get(BEARER_HEADER)?.replace(BEARER_PREFIX, "");
         const isAuthPage = AUTH_PAGES.some(p => pathname.endsWith(p));
         if (!token) {
             if (request.nextUrl.pathname.startsWith('/api')) {
