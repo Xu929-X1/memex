@@ -15,13 +15,16 @@ export default function Hud() {
 
     async function recall(text: string) {
         const t = token();
-        if (!t) return;
+        if (!t) {
+            return;
+        }
         const id = ++reqId;
         setQuery(text);
         setLoading(true);
         try {
             const found = await searchMemory(text, t);
-            if (id === reqId) setResults(found);
+            console.log(found)
+            if (id === reqId) setResults(found.data);
         } catch {
             if (id === reqId) setResults([]);
         } finally {

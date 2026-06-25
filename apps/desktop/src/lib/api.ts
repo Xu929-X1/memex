@@ -70,5 +70,5 @@ export type RelatedMemory = {
 
 // Hybrid (BM25 + vector) recall over the user's captured sections.
 export function searchMemory(query: string, token: string) {
-    return post<RelatedMemory[]>("retrieval", { query }, token);
+    return post<{data: RelatedMemory[]}>("retrieval", { query }, token);
 }

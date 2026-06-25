@@ -7,6 +7,13 @@
 export const CLIENT_HEADER = "X-Client" as const;
 export const BEARER_HEADER = "Authorization" as const;
 export const BEARER_PREFIX = "Bearer "
+
+/**
+ * Header carrying the authenticated user id. Set SERVER-SIDE by the proxy after
+ * it verifies the token, then read by route handlers. Clients must never send
+ * it — doing so would let a caller spoof another user's id.
+ */
+export const CUSTOM_USER_HEADER_KEY = "x-user-id" as const;
 /** Known client identifiers sent in {@link CLIENT_HEADER}. */
 export const CLIENTS = {
     web: "web",

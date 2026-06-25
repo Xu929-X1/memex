@@ -1,8 +1,9 @@
-import { BEARER_HEADER, BEARER_PREFIX, CLIENT_HEADER, CLIENTS, parseClient } from '@memex/shared';
+import { BEARER_HEADER, BEARER_PREFIX, CLIENT_HEADER, CLIENTS, CUSTOM_USER_HEADER_KEY, parseClient } from '@memex/shared';
 import * as jose from 'jose';
 import { NextRequest, NextResponse } from "next/server";
 import { AppError } from './utils/api/Errors';
-export const CUSTOM_USER_HEADER_KEY = "x-user-id"
+// Re-exported so existing `@/proxy` importers keep working.
+export { CUSTOM_USER_HEADER_KEY };
 export const AUTH_TOKEN_KEY = "auth_token";
 
 const AUTH_PAGES = ['/login', '/register'];

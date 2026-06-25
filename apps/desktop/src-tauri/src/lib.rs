@@ -54,6 +54,13 @@ pub fn run() {
             // Watch for global text selections and drive the HUD.
             uia::selection_watcher::spawn(app.handle().clone());
 
+            // Debug builds: pop the HUD's own DevTools so its console.log is
+            // visible (separate webview — main window's DevTools won't show it).
+            #[cfg(debug_assertions)]
+            if let Some(hud) = app.get_webview_window("hud") {
+                hud.open_devtools();
+            }
+
             let window = app.get_webview_window("main").unwrap();
 
             // First run only: no saved state yet, so seed a default position.

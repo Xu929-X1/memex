@@ -42,9 +42,12 @@ pub fn spawn(app: AppHandle) {
             was_down = is_down;
 
             if released {
-                match read_selection(&automation) {
+                let sel = read_selection(&automation);
+                eprintln!("[hud] mouse released, selection = {sel:?}");
+                match sel {
                     Some(text) if !text.trim().is_empty() && text != last_text => {
                         last_text = text.clone();
+                        eprintln!("[hud] showing panel for: {text:?}");
                         show_hud(&app, &text);
                     }
                     _ => hide_hud(&app),
